@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Keenjhar Lake Extension Project – Interactive Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;background:#080e1a}
+    #map-container{width:100%;height:100vh;position:relative;overflow:hidden}
+    #map{width:100%;height:100%}
+    .info-panel{position:absolute;top:10px;right:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.25);border-radius:9px;padding:12px 15px;color:#cde;font-size:12px;line-height:1.9;min-width:200px;max-width:230px;pointer-events:none}
+    .info-panel b{font-size:13px;color:#6df;display:block;margin-bottom:4px}
+    .info-panel .row{display:flex;justify-content:space-between;gap:8px}
+    .info-panel .lbl{color:#789}
+    .info-panel .val{color:#aef;font-weight:500}
+    .layer-panel{position:absolute;bottom:38px;left:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.2);border-radius:9px;padding:10px 13px;color:#cde;font-size:11px;min-width:160px}
+    .layer-panel b{color:#7cf;font-size:12px;display:block;margin-bottom:6px}
+    .layer-row{display:flex;align-items:center;gap:7px;margin:4px 0;cursor:pointer;user-select:none}
+    .layer-row input{accent-color:#4af;width:13px;height:13px;cursor:pointer}
+    .dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+    .legend{position:absolute;bottom:38px;right:10px;z-index:1000;background:rgba(8,18,32,0.88);border:1px solid rgba(80,160,255,0.18);border-radius:9px;padding:10px 13px;font-size:11px;color:#9bc;min-width:170px}
+    .legend b{color:#7cf;font-size:12px;display:block;margin-bottom:6px}
+    .leg-row{display:flex;align-items:center;gap:7px;margin:3px 0}
+    .leg-swatch{width:28px;height:5px;border-radius:2px;flex-shrink:0}
+    .leg-poly{width:28px;height:14px;border-radius:3px;flex-shrink:0;opacity:0.55}
+    .basemap-panel{position:absolute;top:10px;left:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.2);border-radius:9px;padding:8px 12px;font-size:11px;color:#9bc}
+    .basemap-panel b{color:#7cf;font-size:12px;display:block;margin-bottom:5px}
+    .bmbtn{display:block;width:100%;text-align:left;padding:3px 0;background:none;border:none;color:#9bc;font-size:11px;cursor:pointer;border-radius:3px}
+    .bmbtn:hover,.bmbtn.active{color:#6df}
+    .bmbtn.active::before{content:'▸ '}
+  </style>
+</head>
+<body>
+<div id="map-container">
+  <div id="map"></div>
+  <div class="info-panel">
+    <b id="feat-title">Keenjhar Lake Extension Project</b>
+    <div class="row"><span class="lbl">Status</span><span class="val">PSDP Pending</span></div>
+    <div class="row"><span class="lbl">Total cost</span><span class="val">Rs. 170,216 M</span></div>
+    <div class="row"><span class="lbl">Combined live storage</span><span class="val">0.849 MAF</span></div>
+    <div class="row"><span class="lbl">Karachi supply</span><span class="val">2,400 cusecs</span></div>
+    <div id="feat-extra" style="margin-top:6px;border-top:1px solid rgba(80,160,255,0.15);padding-top:6px;display:none"></div>
+  </div>
+  <div class="basemap-panel">
+    <b>Base map</b>
+    <button class="bmbtn active" onclick="switchBase('satellite',this)">Satellite</button>
+    <button class="bmbtn" onclick="switchBase('topo',this)">Topographic</button>
+    <button class="bmbtn" onclick="switchBase('street',this)">Street</button>
+    <button class="bmbtn" onclick="switchBase('dark',this)">Dark</button>
+  </div>
+  <div class="layer-panel">
+    <b>Layers</b>
+    <div class="layer-row"><input type="checkbox" id="l-dep" checked onchange="toggleLayer('dep',this.checked)"><div class="dot" style="background:#3a9cdd;opacity:0.6"></div>Depressions</div>
+    <div class="layer-row"><input type="checkbox" id="l-emb" checked onchange="toggleLayer('emb',this.checked)"><div class="dot" style="background:#8c6535"></div>Embankments</div>
+    <div class="layer-row"><input type="checkbox" id="l-canal" checked onchange="toggleLayer('canal',this.checked)"><div class="dot" style="background:#3ab040"></div>Canals / RBOD</div>
+    <div class="layer-row"><input type="checkbox" id="l-road" checked onchange="toggleLayer('road',this.checked)"><div class="dot" style="background:#e09030"></div>Roads</div>
+    <div class="layer-row"><input type="checkbox" id="l-rail" checked onchange="toggleLayer('rail',this.checked)"><div class="dot" style="background:#888"></div>Railway</div>
+    <div class="layer-row"><input type="checkbox" id="l-settle" checked onchange="toggleLayer('settle',this.checked)"><div class="dot" style="background:#e04030"></div>Settlements</div>
+    <div class="layer-row"><input type="checkbox" id="l-labels" checked onchange="toggleLayer('labels',this.checked)"><div class="dot" style="background:#7df;border-radius:50%"></div>Labels</div>
+  </div>
+  <div class="legend">
+    <b>Legend</b>
+    <div class="leg-row"><div class="leg-poly" style="background:#1a6fbb"></div>Keenjhar Lake</div>
+    <div class="leg-row"><div class="leg-poly" style="background:#2a90cc"></div>Depression basins</div>
+    <div class="leg-row"><div class="leg-poly" style="background:#28804a"></div>Haleji / Hadero</div>
+    <div class="leg-row"><div class="leg-poly" style="background:#c8a050;opacity:0.5"></div>Dredge / depression area</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#8c6535;height:4px"></div>Embankment</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#3ab040"></div>RBOD / canal</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#e09030"></div>Road (realigned)</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#777"></div>Railway</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#e04030;height:8px;border-radius:50%"></div>Settlement</div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map', {zoomControl: true, attributionControl: true}).setView([24.80, 67.82], 11);
+
+const bases = {
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'Esri World Imagery', maxZoom:19}),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {attribution:'OpenTopoMap', maxZoom:17}),
+  street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'OpenStreetMap', maxZoom:19}),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {attribution:'CartoDB', maxZoom:19}),
+};
+bases.satellite.addTo(map);
+let currentBase = 'satellite';
+
+window.switchBase = function(name, btn) {
+  map.removeLayer(bases[currentBase]);
+  bases[name].addTo(map);
+  currentBase = name;
+  document.querySelectorAll('.bmbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+};
+
+const layerGroups = {dep: L.layerGroup(), emb: L.layerGroup(), canal: L.layerGroup(), road: L.layerGroup(), rail: L.layerGroup(), settle: L.layerGroup(), labels: L.layerGroup()};
+Object.values(layerGroups).forEach(g => g.addTo(map));
+
+window.toggleLayer = function(name, on) {
+  if (on) layerGroups[name].addTo(map);
+  else map.removeLayer(layerGroups[name]);
+};
+
+function showInfo(title, rows, extra) {
+  document.getElementById('feat-title').textContent = title;
+  const ex = document.getElementById('feat-extra');
+  if (extra) { ex.innerHTML = extra; ex.style.display = 'block'; } else ex.style.display = 'none';
+}
+
+const keenjharCoords = [
+  [24.935,67.735],[24.930,67.760],[24.920,67.790],[24.905,67.815],
+  [24.895,67.840],[24.880,67.860],[24.870,67.875],[24.855,67.890],
+  [24.840,67.895],[24.820,67.888],[24.805,67.878],[24.795,67.862],
+  [24.785,67.845],[24.775,67.825],[24.770,67.805],[24.768,67.785],
+  [24.770,67.762],[24.778,67.742],[24.790,67.728],[24.808,67.718],
+  [24.825,67.715],[24.845,67.718],[24.862,67.725],[24.878,67.730],
+  [24.895,67.732],[24.912,67.732],[24.924,67.733],[24.935,67.735]
+];
+
+const dep3Coords = [
+  [24.875,67.700],[24.870,67.718],[24.862,67.736],[24.850,67.750],
+  [24.836,67.754],[24.822,67.748],[24.810,67.734],[24.806,67.714],
+  [24.806,67.696],[24.812,67.676],[24.826,67.661],[24.844,67.654],
+  [24.862,67.658],[24.876,67.672],[24.875,67.700]
+];
+const dep2Coords = [
+  [24.870,67.856],[24.872,67.874],[24.866,67.892],[24.854,67.904],
+  [24.840,67.906],[24.828,67.900],[24.818,67.886],[24.816,67.868],
+  [24.822,67.852],[24.834,67.842],[24.848,67.840],[24.862,67.845],[24.870,67.856]
+];
+const dep1Coords = [
+  [24.876,67.936],[24.874,67.954],[24.866,67.968],[24.853,67.976],
+  [24.840,67.974],[24.830,67.962],[24.826,67.946],[24.830,67.930],
+  [24.840,67.920],[24.855,67.916],[24.868,67.920],[24.876,67.936]
+];
+const halejiCoords = [
+  [24.802,67.706],[24.798,67.722],[24.790,67.734],[24.778,67.738],
+  [24.766,67.732],[24.760,67.718],[24.762,67.702],[24.772,67.692],
+  [24.786,67.688],[24.798,67.692],[24.802,67.706]
+];
+const haderoCoords = [
+  [24.848,67.838],[24.846,67.852],[24.840,67.858],[24.832,67.854],
+  [24.828,67.844],[24.832,67.834],[24.840,67.830],[24.848,67.838]
+];
+const dredge3Coords = [
+  [24.862,67.658],[24.875,67.672],[24.876,67.690],[24.870,67.706],
+  [24.858,67.714],[24.844,67.712],[24.834,67.700],[24.832,67.684],
+  [24.840,67.668],[24.854,67.660],[24.862,67.658]
+];
+
+function poly(coords, color, opacity, group, info) {
+  const p = L.polygon(coords, {color: color, fillColor: color, fillOpacity: opacity, weight: 1.5, opacity: 0.85}).addTo(group);
+  if (info) {
+    p.bindPopup(`<b style="color:#333">${info.title}</b><br><span style="font-size:11px">${info.body}</span>`, {maxWidth:240});
+    p.on('click', () => showInfo(info.title, null, info.body));
+  }
+}
+
+poly(keenjharCoords, '#1a6fbb', 0.55, layerGroups.dep, {
+  title: 'Keenjhar Lake',
+  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">~26,500 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.620 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.498 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">57 ft MSL</span><br><span style="color:#789">Karachi supply:</span> <span style="color:#aef">100 MGD existing</span>'
+});
+poly(dep3Coords, '#2a90cc', 0.48, layerGroups.dep, {
+  title: 'Depression-3',
+  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">18,634 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.3234 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.2744 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">54 ft | Emb: 62 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 21,453 M</span>'
+});
+poly(dep2Coords, '#2a90cc', 0.48, layerGroups.dep, {
+  title: 'Depression-2',
+  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">10,240 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.1552 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.1314 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">56 ft | Emb: 63 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 12,839 M</span>'
+});
+poly(dep1Coords, '#2a90cc', 0.48, layerGroups.dep, {
+  title: 'Depression-1',
+  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">3,496 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.0650 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.0551 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">56 ft | Emb: 63 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 6,728 M</span>'
+});
+poly(halejiCoords, '#28804a', 0.60, layerGroups.dep, {
+  title: 'Haleji Lake',
+  body: '<span style="color:#789">Protected Ramsar wetland</span><br><span style="color:#789">Major bird sanctuary, Thatta district</span><br><span style="color:#789">Managed by Sindh Wildlife Dept</span>'
+});
+poly(haderoCoords, '#28804a', 0.55, layerGroups.dep, {
+  title: 'Hadero Lake',
+  body: '<span style="color:#789">Seasonal lake near Jokhio</span><br><span style="color:#789">Part of the greater wetland complex</span>'
+});
+poly(dredge3Coords, '#c8a050', 0.22, layerGroups.dep, {
+  title: 'Dredging area — Depression-3',
+  body: '<span style="color:#789">Largest proposed dredge zone</span><br><span style="color:#789">Removes silt to increase live storage</span>'
+});
+
+function embank(coords, group) {
+  L.polyline(coords, {color:'#8c6535', weight:5, opacity:0.9}).addTo(group);
+  L.polyline(coords, {color:'#c8a060', weight:2, opacity:0.6, dashArray:'6,4'}).addTo(group);
+}
+
+const emb3 = [[24.875,67.700],[24.870,67.718],[24.862,67.736],[24.850,67.750],[24.836,67.754],[24.822,67.748],[24.810,67.734],[24.806,67.714],[24.806,67.696],[24.812,67.676],[24.826,67.661],[24.844,67.654],[24.862,67.658],[24.876,67.672],[24.875,67.700]];
+const emb2 = [[24.870,67.856],[24.872,67.874],[24.866,67.892],[24.854,67.904],[24.840,67.906],[24.828,67.900],[24.818,67.886],[24.816,67.868],[24.822,67.852],[24.834,67.842],[24.848,67.840],[24.862,67.845],[24.870,67.856]];
+const emb1 = [[24.876,67.936],[24.874,67.954],[24.866,67.968],[24.853,67.976],[24.840,67.974],[24.830,67.962],[24.826,67.946],[24.830,67.930],[24.840,67.920],[24.855,67.916],[24.868,67.920],[24.876,67.936]];
+embank(emb3, layerGroups.emb);
+embank(emb2, layerGroups.emb);
+embank(emb1, layerGroups.emb);
+
+const rbodLine = [[24.840,67.660],[24.838,67.690],[24.836,67.720],[24.835,67.750],[24.834,67.780],[24.833,67.810],[24.832,67.840],[24.831,67.870],[24.830,67.900],[24.829,67.930],[24.828,67.960]];
+L.polyline(rbodLine, {color:'#3ab040', weight:4, opacity:0.9}).addTo(layerGroups.canal);
+L.polyline(rbodLine, {color:'#1a7830', weight:7, opacity:0.35}).addTo(layerGroups.canal);
+
+const ch1 = [[24.838,67.862],[24.844,67.878],[24.850,67.898],[24.855,67.920],[24.858,67.942]];
+const ch2 = [[24.838,67.750],[24.840,67.780],[24.842,67.812],[24.845,67.840],[24.848,67.862]];
+L.polyline(ch1, {color:'#50c060', weight:3, opacity:0.8, dashArray:'8,3'}).addTo(layerGroups.canal);
+L.polyline(ch2, {color:'#50c060', weight:3, opacity:0.8, dashArray:'8,3'}).addTo(layerGroups.canal);
+
+const kbfl = [[24.800,67.720],[24.798,67.748],[24.796,67.778],[24.794,67.810],[24.792,67.840],[24.790,67.870],[24.788,67.900]];
+L.polyline(kbfl, {color:'#30b8e8', weight:3, opacity:0.75}).addTo(layerGroups.canal);
+
+const n5 = [[24.790,67.630],[24.792,67.680],[24.794,67.730],[24.796,67.780],[24.798,67.830],[24.800,67.880],[24.802,67.930],[24.804,67.980]];
+L.polyline(n5, {color:'#e09030', weight:4, opacity:0.9}).addTo(layerGroups.road);
+
+const realignedRoad = [[24.845,67.660],[24.842,67.695],[24.840,67.730],[24.838,67.762],[24.836,67.795]];
+L.polyline(realignedRoad, {color:'#e04020', weight:3, opacity:0.8, dashArray:'10,5'}).addTo(layerGroups.road);
+
+const railway = [[24.890,67.650],[24.888,67.700],[24.886,67.750],[24.884,67.800],[24.882,67.850],[24.880,67.900],[24.878,67.950],[24.876,68.000]];
+L.polyline(railway, {color:'#777', weight:4, opacity:0.9}).addTo(layerGroups.rail);
+L.polyline(railway, {color:'#aaa', weight:1.5, dashArray:'4,8', opacity:0.7}).addTo(layerGroups.rail);
+
+const settlements = [
+  {ll:[24.870,67.760],name:'Muhammad Khan Jamadar'},{ll:[24.862,67.785],name:'Mitha Pali'},
+  {ll:[24.858,67.810],name:'Jafar Khan'},{ll:[24.848,67.838],name:'Jokhio'},
+  {ll:[24.840,67.862],name:'Samohi'},{ll:[24.858,67.885],name:'Sobho Janwari'},
+  {ll:[24.862,67.908],name:'Haji Jamail'},{ll:[24.868,67.935],name:'Chatto Chand'},
+  {ll:[24.875,67.955],name:'Jakhro'},{ll:[24.820,67.752],name:'Alu Jamadar'},
+  {ll:[24.808,67.742],name:'Ali Anmad Goth'},{ll:[24.798,67.726],name:'Haleji village'},
+  {ll:[24.832,67.700],name:'Goth Ghazi Khan'},{ll:[24.855,67.722],name:'Sumar'},
+  {ll:[24.878,67.720],name:'Onghar'},{ll:[24.885,67.755],name:'Haji Hasan Ali'},
+];
+
+const settleIcon = L.divIcon({
+  html: '<div style="width:9px;height:9px;background:#e04030;border:2px solid #ff8070;border-radius:2px;box-shadow:0 0 4px rgba(220,60,40,0.6)"></div>',
+  className:'', iconSize:[9,9], iconAnchor:[4.5,4.5]
+});
+settlements.forEach(s => {
+  const mk = L.marker(s.ll, {icon: settleIcon}).addTo(layerGroups.settle);
+  mk.bindPopup(`<b style="color:#333">${s.name}</b><br><span style="font-size:11px;color:#666">Rural settlement<br>Land acquisition & resettlement planned</span>`, {maxWidth:200});
+  mk.on('click', () => showInfo(s.name, null, `<span style="color:#789">Type:</span> <span style="color:#aef">Rural settlement</span><br><span style="color:#789">Land acq. budget:</span> <span style="color:#aef">Rs. 13,654 M total</span>`));
+});
+
+function labelMarker(ll, text, color='#7df', bg='rgba(8,18,36,0.82)') {
+  const icon = L.divIcon({
+    html: `<div style="background:${bg};border:1px solid rgba(80,180,255,0.3);border-radius:5px;padding:2px 7px;color:${color};font-size:10px;font-weight:600;white-space:nowrap;pointer-events:none">${text}</div>`,
+    className:'', iconSize:'auto', iconAnchor:[0,0]
+  });
+  return L.marker(ll, {icon, interactive:false}).addTo(layerGroups.labels);
+}
+
+labelMarker([24.855,67.790],'Keenjhar Lake','#6ddaff');
+labelMarker([24.840,67.705],'Dep-3 · 0.274 MAF','#9de8ff');
+labelMarker([24.845,67.875],'Dep-2 · 0.155 MAF','#9de8ff');
+labelMarker([24.854,67.943],'Dep-1 · 0.065 MAF','#9de8ff');
+labelMarker([24.788,67.728],'Haleji Lake','#8df0a0');
+labelMarker([24.844,67.848],'Hadero Lake','#8df0f0');
+labelMarker([24.834,67.790],'RBOD Canal','#b0f060');
+labelMarker([24.798,67.780],'N-5 Highway','#e8d090');
+labelMarker([24.883,67.800],'Railway','#bbb');
+labelMarker([24.857,67.742],'Kotri Barrage corridor','#dda');
+
+const projectIcon = L.divIcon({
+  html: '<div style="width:14px;height:14px;background:#4af;border:3px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(60,180,255,0.8)"></div>',
+  className:'', iconSize:[14,14], iconAnchor:[7,7]
+});
+L.marker([24.833,67.795], {icon: projectIcon}).addTo(map)
+  .bindPopup('<b>Project centroid</b><br>Extension of Keenjhar Lake<br>Irrigation Dept, Govt of Sindh<br>Cost: Rs. 170,216 million', {maxWidth:220});
+
+map.on('click', e => {
+  showInfo('Keenjhar Lake Extension Project', null, null);
+  document.getElementById('feat-extra').style.display = 'none';
+});
+
+L.control.scale({metric:true, imperial:false, position:'bottomleft'}).addTo(map);
+</script>
+</body>
+</html>
