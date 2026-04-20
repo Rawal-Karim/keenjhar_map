@@ -23,7 +23,8 @@
 
     /* Info panel */
     #info-panel{top:12px;right:12px;padding:14px 16px;min-width:224px;max-width:252px;pointer-events:none}
-    .panel-title{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#50b8f8;display:block;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid rgba(60,140,255,0.18)}
+    #info-panel .panel-header{pointer-events:all}
+    .panel-title{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#50b8f8;display:block}
     .stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin:5px 0}
     .stat-lbl{font-size:12px;color:#607a90}
     .stat-val{font-size:12.5px;font-weight:600;color:#90ccf8;font-family:'JetBrains Mono',monospace}
@@ -48,6 +49,21 @@
     .leg-row{display:flex;align-items:center;gap:8px;margin:4px 0;color:#7898b0}
     .leg-swatch{width:26px;height:5px;border-radius:2px;flex-shrink:0}
     .leg-poly{width:26px;height:13px;border-radius:3px;flex-shrink:0}
+
+    /* Minimize button */
+    .panel-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid rgba(60,140,255,0.18)}
+    .panel-header .panel-title{margin-bottom:0;padding-bottom:0;border-bottom:none;flex:1}
+    .min-btn{
+      background:none;border:none;cursor:pointer;
+      color:rgba(80,184,248,0.5);font-size:13px;line-height:1;
+      padding:0 2px;transition:color .15s;flex-shrink:0;
+      font-family:'Barlow Condensed',sans-serif;font-weight:700;
+    }
+    .min-btn:hover{color:#50b8f8}
+    .panel-body{transition:opacity .15s}
+    .panel.minimized .panel-body{display:none}
+    .panel.minimized .panel-header{margin-bottom:0;padding-bottom:0;border-bottom:none}
+    .panel.minimized{padding-bottom:10px}
 
     /* Node pulse animations */
     @keyframes nodePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,170,30,0.8)}60%{box-shadow:0 0 0 12px rgba(255,170,30,0)}}
@@ -102,36 +118,55 @@
   <div id="map"></div>
 
   <div id="info-panel" class="panel">
-    <span class="panel-title" id="feat-title">Keenjhar Lake Extension Project</span>
-    <div class="stat-row"><span class="stat-lbl">Status</span><span class="stat-val amber">PSDP Pending</span></div>
-    <div class="stat-row"><span class="stat-lbl">Total cost</span><span class="stat-val">Rs. 170,216 M</span></div>
-    <div class="stat-row"><span class="stat-lbl">Combined live storage</span><span class="stat-val green">0.849 MAF</span></div>
-    <div class="stat-row"><span class="stat-lbl">Karachi supply target</span><span class="stat-val">2,400 cusecs</span></div>
-    <div id="feat-extra"></div>
+    <div class="panel-header">
+      <span class="panel-title" id="feat-title">Keenjhar Lake Extension Project</span>
+      <button class="min-btn" title="Minimize" onclick="togglePanel('info-panel')">▼</button>
+    </div>
+    <div class="panel-body">
+      <div class="stat-row"><span class="stat-lbl">Status</span><span class="stat-val amber">PSDP Pending</span></div>
+      <div class="stat-row"><span class="stat-lbl">Total cost</span><span class="stat-val">Rs. 170,216 M</span></div>
+      <div class="stat-row"><span class="stat-lbl">Combined live storage</span><span class="stat-val green">0.849 MAF</span></div>
+      <div class="stat-row"><span class="stat-lbl">Karachi supply target</span><span class="stat-val">2,400 cusecs</span></div>
+      <div id="feat-extra"></div>
+    </div>
   </div>
 
   <div id="basemap-panel" class="panel">
-    <span class="panel-title">Base map</span>
-    <button class="bmbtn active" onclick="switchBase('satellite',this)">Satellite</button>
-    <button class="bmbtn" onclick="switchBase('topo',this)">Topographic</button>
-    <button class="bmbtn" onclick="switchBase('street',this)">Street</button>
-    <button class="bmbtn" onclick="switchBase('dark',this)">Dark</button>
+    <div class="panel-header">
+      <span class="panel-title">Base map</span>
+      <button class="min-btn" title="Minimize" onclick="togglePanel('basemap-panel')">▼</button>
+    </div>
+    <div class="panel-body">
+      <button class="bmbtn active" onclick="switchBase('satellite',this)">Satellite</button>
+      <button class="bmbtn" onclick="switchBase('topo',this)">Topographic</button>
+      <button class="bmbtn" onclick="switchBase('street',this)">Street</button>
+      <button class="bmbtn" onclick="switchBase('dark',this)">Dark</button>
+    </div>
   </div>
 
   <div id="layer-panel" class="panel">
-    <span class="panel-title">Layers</span>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('dep',this.checked)"><div class="dot" style="background:#1a70c0;opacity:0.75"></div>Lakes / depressions</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('emb',this.checked)"><div class="dot" style="background:#a07040"></div>Embankments</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('canal',this.checked)"><div class="dot" style="background:#28a838"></div>Canals & feeders</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('road',this.checked)"><div class="dot" style="background:#c87820"></div>Roads</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('rail',this.checked)"><div class="dot" style="background:#888"></div>Railway</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('settle',this.checked)"><div class="dot" style="background:#d83828"></div>Settlements</div>
-    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('labels',this.checked)"><div class="dot" style="background:#7ddcff;border-radius:50%"></div>Labels</div>
-    <div class="layer-row"><input type="checkbox" id="flow-chk" onchange="toggleFlow(this.checked)"><div class="dot" style="background:#00d8ff;border-radius:50%"></div>Water flow</div>
+    <div class="panel-header">
+      <span class="panel-title">Layers</span>
+      <button class="min-btn" title="Minimize" onclick="togglePanel('layer-panel')">▼</button>
+    </div>
+    <div class="panel-body">
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('dep',this.checked)"><div class="dot" style="background:#1a70c0;opacity:0.75"></div>Lakes / depressions</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('emb',this.checked)"><div class="dot" style="background:#a07040"></div>Embankments</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('canal',this.checked)"><div class="dot" style="background:#28a838"></div>Canals & feeders</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('road',this.checked)"><div class="dot" style="background:#c87820"></div>Roads</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('rail',this.checked)"><div class="dot" style="background:#888"></div>Railway</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('settle',this.checked)"><div class="dot" style="background:#d83828"></div>Settlements</div>
+      <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('labels',this.checked)"><div class="dot" style="background:#7ddcff;border-radius:50%"></div>Labels</div>
+      <div class="layer-row"><input type="checkbox" id="flow-chk" onchange="toggleFlow(this.checked)"><div class="dot" style="background:#00d8ff;border-radius:50%"></div>Water flow</div>
+    </div>
   </div>
 
   <div id="legend" class="panel">
-    <span class="panel-title">Legend</span>
+    <div class="panel-header">
+      <span class="panel-title">Legend</span>
+      <button class="min-btn" title="Minimize" onclick="togglePanel('legend')">▼</button>
+    </div>
+    <div class="panel-body">
     <div class="leg-row"><div class="leg-poly" style="background:#1a5898;opacity:0.68"></div>Keenjhar Lake</div>
     <div class="leg-row"><div class="leg-poly" style="background:#2080b8;opacity:0.55"></div>Proposed depressions</div>
     <div class="leg-row"><div class="leg-poly" style="background:#1e6838;opacity:0.68"></div>Haleji / Hadero</div>
@@ -146,6 +181,7 @@
     <div class="leg-row"><div class="leg-swatch" style="background:#20b8e0"></div>Gujjo–Dhabeji transmission</div>
     <div class="leg-row"><div class="leg-swatch" style="background:#60d8ff"></div>Pipeline to Karachi</div>
     <div class="leg-row"><div style="width:10px;height:10px;border-radius:50%;background:#00d8ff;flex-shrink:0;box-shadow:0 0 4px rgba(0,200,255,0.9)"></div>Animated flow dots</div>
+    </div>
   </div>
 
   <div id="route-ctrl" class="panel">
@@ -753,6 +789,15 @@ nodeMarker([24.770,67.350],'Karachi — Distribution','#70d8ff','nodeBlue',
      ['Population (2020)','27.55 million'],
      ['Population by 2050','57.3 million (projected)']],
     'Karachi is Pakistan\'s largest city and economic hub. Current supply is ~44% of 2050 projected demand, making the Keenjhar Extension critical to long-term water security.'));
+
+// ── PANEL MINIMIZE ───────────────────────────────────────────────────────────
+window.togglePanel=function(id){
+  const panel=document.getElementById(id);
+  const btn=panel.querySelector('.min-btn');
+  const minimized=panel.classList.toggle('minimized');
+  btn.textContent=minimized?'▲':'▼';
+  btn.title=minimized?'Expand':'Minimize';
+};
 
 // Auto-start animation on load
 setTimeout(()=>{ toggleAnim(); document.getElementById('flow-chk').checked=true; },800);
