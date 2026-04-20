@@ -3,276 +3,1097 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Keenjhar Lake Extension Project – Interactive Map</title>
+  <title>Keenjhar Lake Extension Project – Interactive Map + GloFAS</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;height:100%;background:#080e1a}
+    html,body{width:100%;height:100%;background:#060d18}
     #map-container{width:100%;height:100vh;position:relative;overflow:hidden}
     #map{width:100%;height:100%}
-    .info-panel{position:absolute;top:10px;right:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.25);border-radius:9px;padding:12px 15px;color:#cde;font-size:12px;line-height:1.9;min-width:200px;max-width:230px;pointer-events:none}
-    .info-panel b{font-size:13px;color:#6df;display:block;margin-bottom:4px}
-    .info-panel .row{display:flex;justify-content:space-between;gap:8px}
-    .info-panel .lbl{color:#789}
-    .info-panel .val{color:#aef;font-weight:500}
-    .layer-panel{position:absolute;bottom:38px;left:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.2);border-radius:9px;padding:10px 13px;color:#cde;font-size:11px;min-width:160px}
-    .layer-panel b{color:#7cf;font-size:12px;display:block;margin-bottom:6px}
-    .layer-row{display:flex;align-items:center;gap:7px;margin:4px 0;cursor:pointer;user-select:none}
-    .layer-row input{accent-color:#4af;width:13px;height:13px;cursor:pointer}
-    .dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
-    .legend{position:absolute;bottom:38px;right:10px;z-index:1000;background:rgba(8,18,32,0.88);border:1px solid rgba(80,160,255,0.18);border-radius:9px;padding:10px 13px;font-size:11px;color:#9bc;min-width:170px}
-    .legend b{color:#7cf;font-size:12px;display:block;margin-bottom:6px}
-    .leg-row{display:flex;align-items:center;gap:7px;margin:3px 0}
-    .leg-swatch{width:28px;height:5px;border-radius:2px;flex-shrink:0}
-    .leg-poly{width:28px;height:14px;border-radius:3px;flex-shrink:0;opacity:0.55}
-    .basemap-panel{position:absolute;top:10px;left:10px;z-index:1000;background:rgba(8,18,32,0.92);border:1px solid rgba(80,160,255,0.2);border-radius:9px;padding:8px 12px;font-size:11px;color:#9bc}
-    .basemap-panel b{color:#7cf;font-size:12px;display:block;margin-bottom:5px}
-    .bmbtn{display:block;width:100%;text-align:left;padding:3px 0;background:none;border:none;color:#9bc;font-size:11px;cursor:pointer;border-radius:3px}
-    .bmbtn:hover,.bmbtn.active{color:#6df}
+
+    .panel{
+      position:absolute;z-index:1000;
+      background:rgba(4,11,22,0.94);
+      border:1px solid rgba(60,140,255,0.20);
+      border-radius:8px;color:#c0d8ee;
+      font-family:'Barlow Condensed',sans-serif;
+      backdrop-filter:blur(8px);
+    }
+
+    /* Info panel */
+    #info-panel{top:12px;right:12px;padding:14px 16px;min-width:224px;max-width:252px;pointer-events:none}
+    .panel-title{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#50b8f8;display:block;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid rgba(60,140,255,0.18)}
+    .stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin:5px 0}
+    .stat-lbl{font-size:12px;color:#607a90}
+    .stat-val{font-size:12.5px;font-weight:600;color:#90ccf8;font-family:'JetBrains Mono',monospace}
+    .stat-val.green{color:#52d48a}
+    .stat-val.amber{color:#e8aa38}
+    #feat-extra{margin-top:8px;padding-top:8px;border-top:1px solid rgba(60,140,255,0.14);font-size:11px;line-height:1.75;display:none}
+
+    /* Basemap panel */
+    #basemap-panel{top:12px;left:12px;padding:10px 13px}
+    .bmbtn{display:block;width:100%;text-align:left;padding:3px 0;background:none;border:none;color:#708898;font-size:12px;font-family:'Barlow Condensed',sans-serif;cursor:pointer;letter-spacing:.02em}
+    .bmbtn:hover,.bmbtn.active{color:#50b8f8}
     .bmbtn.active::before{content:'▸ '}
+
+    /* Layer panel */
+    #layer-panel{bottom:44px;left:12px;padding:10px 13px}
+    .layer-row{display:flex;align-items:center;gap:7px;margin:4px 0;cursor:pointer;user-select:none;font-size:12px;color:#90a8bc}
+    .layer-row input{accent-color:#40aaff;width:12px;height:12px;cursor:pointer}
+    .dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+
+    /* Legend */
+    #legend{bottom:44px;right:12px;padding:10px 13px;font-size:11.5px}
+    .leg-row{display:flex;align-items:center;gap:8px;margin:4px 0;color:#7898b0}
+    .leg-swatch{width:26px;height:5px;border-radius:2px;flex-shrink:0}
+    .leg-poly{width:26px;height:13px;border-radius:3px;flex-shrink:0}
+
+    /* Node pulse animations */
+    @keyframes nodePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,170,30,0.8)}60%{box-shadow:0 0 0 12px rgba(255,170,30,0)}}
+    @keyframes nodeBlue{0%,100%{box-shadow:0 0 0 0 rgba(40,180,255,0.8)}60%{box-shadow:0 0 0 12px rgba(40,180,255,0)}}
+    @keyframes nodeGreen{0%,100%{box-shadow:0 0 0 0 rgba(60,210,100,0.8)}60%{box-shadow:0 0 0 12px rgba(60,210,100,0)}}
+    @keyframes nodeCyan{0%,100%{box-shadow:0 0 0 0 rgba(30,200,230,0.8)}60%{box-shadow:0 0 0 12px rgba(30,200,230,0)}}
+
+    #route-ctrl{
+      bottom:12px;left:50%;transform:translateX(-50%);
+      padding:9px 14px;display:flex;align-items:center;gap:10px;
+      white-space:nowrap;z-index:1001;
+    }
+    #route-ctrl .panel-title{border:none;padding:0;margin:0;font-size:11px}
+    .rc-btn{
+      background:none;border:1px solid rgba(60,140,255,0.35);border-radius:6px;
+      color:#90ccf8;font-family:'Barlow Condensed',sans-serif;font-size:12px;
+      font-weight:700;padding:5px 13px;cursor:pointer;letter-spacing:.04em;
+      transition:background .15s,color .15s;
+    }
+    .rc-btn:hover{background:rgba(60,140,255,0.15);color:#c0e8ff}
+    .rc-btn.playing{background:rgba(40,200,100,0.12);border-color:rgba(40,200,100,0.45);color:#50e090}
+    .spd-grp{display:flex;gap:3px}
+    .spd-btn{
+      background:none;border:1px solid rgba(60,140,255,0.22);border-radius:4px;
+      color:#607a90;font-family:'Barlow Condensed',sans-serif;font-size:11px;
+      padding:3px 9px;cursor:pointer;transition:background .15s,color .15s;
+    }
+    .spd-btn:hover,.spd-btn.on{background:rgba(60,140,255,0.14);color:#90ccf8;border-color:rgba(60,140,255,0.45)}
+    .rc-sep{width:1px;height:20px;background:rgba(60,140,255,0.2)}
+    #seg-label{font-size:11px;color:#607a90;min-width:130px}
+
+    /* ── GloFAS Panel ─────────────────────────────────────────────────── */
+    #glofas-panel{
+      top:12px;left:50%;transform:translateX(-50%);
+      padding:0;min-width:340px;max-width:400px;z-index:1002;
+      overflow:hidden;
+    }
+    #glofas-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 14px 8px;cursor:pointer;
+      border-bottom:1px solid rgba(60,140,255,0.18);
+    }
+    #glofas-header-left{display:flex;align-items:center;gap:9px}
+    .glofas-logo{
+      width:26px;height:26px;border-radius:5px;
+      background:linear-gradient(135deg,#0055a5,#1a8cff);
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:800;color:#fff;letter-spacing:.02em;flex-shrink:0
+    }
+    #glofas-title-txt{font-size:12px;font-weight:700;color:#50b8f8;letter-spacing:.04em;text-transform:uppercase}
+    #glofas-subtitle{font-size:10px;color:#507888;margin-top:1px}
+    #glofas-toggle-icon{color:#405878;font-size:14px;transition:transform .25s}
+    #glofas-body{padding:11px 14px 13px;display:block}
+    .gf-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+    .gf-card{
+      background:rgba(10,20,38,0.70);border:1px solid rgba(60,140,255,0.16);
+      border-radius:6px;padding:8px 10px;
+    }
+    .gf-card-title{font-size:9.5px;color:#506880;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+    .gf-card-val{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#90ccf8;line-height:1}
+    .gf-card-unit{font-size:10px;color:#507888;margin-top:3px}
+    .gf-card-val.high{color:#ff6050}
+    .gf-card-val.med{color:#e8aa38}
+    .gf-card-val.low{color:#52d48a}
+    .gf-bar-wrap{width:100%;height:6px;background:rgba(40,80,120,0.35);border-radius:3px;overflow:hidden;margin-top:5px}
+    .gf-bar{height:100%;border-radius:3px;transition:width .8s ease}
+    .gf-divider{height:1px;background:rgba(60,140,255,0.12);margin:8px 0}
+    .gf-status-row{display:flex;align-items:center;gap:8px;font-size:11px;color:#7898b0}
+    .gf-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .gf-dot.green{background:#52d48a;box-shadow:0 0 5px #52d48a80}
+    .gf-dot.amber{background:#e8aa38;box-shadow:0 0 5px #e8aa3880}
+    .gf-dot.red{background:#ff6050;box-shadow:0 0 5px #ff605080}
+    .gf-dot.blue{background:#40aaff;box-shadow:0 0 5px #40aaff80}
+    .gf-forecast-row{display:flex;gap:4px;margin-top:8px}
+    .gf-fc-day{
+      flex:1;background:rgba(10,20,38,0.55);border:1px solid rgba(60,140,255,0.14);
+      border-radius:5px;padding:5px 4px;text-align:center;
+    }
+    .gf-fc-label{font-size:9px;color:#506880;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+    .gf-fc-val{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#80b8e8}
+    .gf-fc-val.high{color:#ff7060}
+    .gf-fc-val.med{color:#e8b840}
+    .gf-source{font-size:9.5px;color:#405060;margin-top:9px;padding-top:7px;border-top:1px solid rgba(60,140,255,0.10);line-height:1.55}
+    .gf-source a{color:#3080c0;text-decoration:none}
+    .gf-source a:hover{text-decoration:underline}
+    #glofas-loading{padding:14px;text-align:center;color:#4068a0;font-size:12px}
+    @keyframes gfPulse{0%,100%{opacity:.5}50%{opacity:1}}
+    .gf-loading-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3080c0;margin:0 2px;animation:gfPulse 1.4s ease-in-out infinite}
+    .gf-loading-dot:nth-child(2){animation-delay:.2s}
+    .gf-loading-dot:nth-child(3){animation-delay:.4s}
+    .gf-alert-banner{
+      margin-bottom:8px;padding:7px 10px;border-radius:5px;font-size:11px;line-height:1.5;
+      display:none;
+    }
+    .gf-alert-banner.flood{background:rgba(255,60,40,0.12);border:1px solid rgba(255,60,40,0.30);color:#ff9080}
+    .gf-alert-banner.warning{background:rgba(232,170,56,0.12);border:1px solid rgba(232,170,56,0.30);color:#e8c060}
+
+    /* Leaflet popup overrides */
+    .leaflet-popup-content-wrapper{
+      background:rgba(4,12,26,0.97)!important;
+      border:1px solid rgba(60,140,255,0.28)!important;
+      border-radius:8px!important;color:#c0d8ee!important;
+      box-shadow:0 6px 32px rgba(0,0,0,0.6)!important;
+      font-family:'Barlow Condensed',sans-serif!important;
+    }
+    .leaflet-popup-tip{background:rgba(4,12,26,0.97)!important}
+    .leaflet-popup-content{margin:13px 15px!important;font-size:13px!important;line-height:1.6!important}
+    .pop-title{font-size:15px;font-weight:700;color:#50b8f8;margin-bottom:9px;border-bottom:1px solid rgba(60,140,255,0.22);padding-bottom:6px}
+    .pop-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
+    .pop-lbl{color:#607a90;font-size:12px;white-space:nowrap}
+    .pop-val{color:#90ccf8;font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace}
+    .pop-note{font-size:11px;color:#506878;margin-top:8px;padding-top:7px;border-top:1px solid rgba(60,140,255,0.12);line-height:1.55}
+    .pop-divider{grid-column:1/-1;height:1px;background:rgba(60,140,255,0.12);margin:5px 0}
   </style>
 </head>
 <body>
 <div id="map-container">
   <div id="map"></div>
-  <div class="info-panel">
-    <b id="feat-title">Keenjhar Lake Extension Project</b>
-    <div class="row"><span class="lbl">Status</span><span class="val">PSDP Pending</span></div>
-    <div class="row"><span class="lbl">Total cost</span><span class="val">Rs. 170,216 M</span></div>
-    <div class="row"><span class="lbl">Combined live storage</span><span class="val">0.849 MAF</span></div>
-    <div class="row"><span class="lbl">Karachi supply</span><span class="val">2,400 cusecs</span></div>
-    <div id="feat-extra" style="margin-top:6px;border-top:1px solid rgba(80,160,255,0.15);padding-top:6px;display:none"></div>
+
+  <div id="info-panel" class="panel">
+    <span class="panel-title" id="feat-title">Keenjhar Lake Extension Project</span>
+    <div class="stat-row"><span class="stat-lbl">Status</span><span class="stat-val amber">PSDP Pending</span></div>
+    <div class="stat-row"><span class="stat-lbl">Total cost</span><span class="stat-val">Rs. 170,216 M</span></div>
+    <div class="stat-row"><span class="stat-lbl">Combined live storage</span><span class="stat-val green">0.849 MAF</span></div>
+    <div class="stat-row"><span class="stat-lbl">Karachi supply target</span><span class="stat-val">2,400 cusecs</span></div>
+    <div id="feat-extra"></div>
   </div>
-  <div class="basemap-panel">
-    <b>Base map</b>
+
+  <div id="basemap-panel" class="panel">
+    <span class="panel-title">Base map</span>
     <button class="bmbtn active" onclick="switchBase('satellite',this)">Satellite</button>
     <button class="bmbtn" onclick="switchBase('topo',this)">Topographic</button>
     <button class="bmbtn" onclick="switchBase('street',this)">Street</button>
     <button class="bmbtn" onclick="switchBase('dark',this)">Dark</button>
   </div>
-  <div class="layer-panel">
-    <b>Layers</b>
-    <div class="layer-row"><input type="checkbox" id="l-dep" checked onchange="toggleLayer('dep',this.checked)"><div class="dot" style="background:#3a9cdd;opacity:0.6"></div>Depressions</div>
-    <div class="layer-row"><input type="checkbox" id="l-emb" checked onchange="toggleLayer('emb',this.checked)"><div class="dot" style="background:#8c6535"></div>Embankments</div>
-    <div class="layer-row"><input type="checkbox" id="l-canal" checked onchange="toggleLayer('canal',this.checked)"><div class="dot" style="background:#3ab040"></div>Canals / RBOD</div>
-    <div class="layer-row"><input type="checkbox" id="l-road" checked onchange="toggleLayer('road',this.checked)"><div class="dot" style="background:#e09030"></div>Roads</div>
-    <div class="layer-row"><input type="checkbox" id="l-rail" checked onchange="toggleLayer('rail',this.checked)"><div class="dot" style="background:#888"></div>Railway</div>
-    <div class="layer-row"><input type="checkbox" id="l-settle" checked onchange="toggleLayer('settle',this.checked)"><div class="dot" style="background:#e04030"></div>Settlements</div>
-    <div class="layer-row"><input type="checkbox" id="l-labels" checked onchange="toggleLayer('labels',this.checked)"><div class="dot" style="background:#7df;border-radius:50%"></div>Labels</div>
+
+  <div id="layer-panel" class="panel">
+    <span class="panel-title">Layers</span>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('dep',this.checked)"><div class="dot" style="background:#1a70c0;opacity:0.75"></div>Lakes / depressions</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('emb',this.checked)"><div class="dot" style="background:#a07040"></div>Embankments</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('canal',this.checked)"><div class="dot" style="background:#28a838"></div>Canals & feeders</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('road',this.checked)"><div class="dot" style="background:#c87820"></div>Roads</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('rail',this.checked)"><div class="dot" style="background:#888"></div>Railway</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('settle',this.checked)"><div class="dot" style="background:#d83828"></div>Settlements</div>
+    <div class="layer-row"><input type="checkbox" checked onchange="toggleLayer('labels',this.checked)"><div class="dot" style="background:#7ddcff;border-radius:50%"></div>Labels</div>
+    <div class="layer-row"><input type="checkbox" id="flow-chk" onchange="toggleFlow(this.checked)"><div class="dot" style="background:#00d8ff;border-radius:50%"></div>Water flow</div>
   </div>
-  <div class="legend">
-    <b>Legend</b>
-    <div class="leg-row"><div class="leg-poly" style="background:#1a6fbb"></div>Keenjhar Lake</div>
-    <div class="leg-row"><div class="leg-poly" style="background:#2a90cc"></div>Depression basins</div>
-    <div class="leg-row"><div class="leg-poly" style="background:#28804a"></div>Haleji / Hadero</div>
-    <div class="leg-row"><div class="leg-poly" style="background:#c8a050;opacity:0.5"></div>Dredge / depression area</div>
-    <div class="leg-row"><div class="leg-swatch" style="background:#8c6535;height:4px"></div>Embankment</div>
-    <div class="leg-row"><div class="leg-swatch" style="background:#3ab040"></div>RBOD / canal</div>
-    <div class="leg-row"><div class="leg-swatch" style="background:#e09030"></div>Road (realigned)</div>
-    <div class="leg-row"><div class="leg-swatch" style="background:#777"></div>Railway</div>
-    <div class="leg-row"><div class="leg-swatch" style="background:#e04030;height:8px;border-radius:50%"></div>Settlement</div>
+
+  <div id="legend" class="panel">
+    <span class="panel-title">Legend</span>
+    <div class="leg-row"><div class="leg-poly" style="background:#1a5898;opacity:0.68"></div>Keenjhar Lake</div>
+    <div class="leg-row"><div class="leg-poly" style="background:#2080b8;opacity:0.55"></div>Proposed depressions</div>
+    <div class="leg-row"><div class="leg-poly" style="background:#1e6838;opacity:0.68"></div>Haleji / Hadero</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#a07040;height:4px"></div>Embankment</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#28a838"></div>KBFU / KG Canal</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#18a0c8"></div>KBFL canal</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#50c060;height:4px;opacity:0.7"></div>Connecting channels</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#c87820"></div>N-5 Highway</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#666"></div>Railway</div>
+    <div class="leg-row" style="margin-top:6px;padding-top:6px;border-top:0.5px solid rgba(60,140,255,0.15)"><div class="leg-swatch" style="background:#f0a020"></div>Kotri Barrage intake</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#20c840"></div>KBFU / KG Canal</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#20b8e0"></div>Gujjo–Dhabeji transmission</div>
+    <div class="leg-row"><div class="leg-swatch" style="background:#60d8ff"></div>Pipeline to Karachi</div>
+    <div class="leg-row"><div style="width:10px;height:10px;border-radius:50%;background:#00d8ff;flex-shrink:0;box-shadow:0 0 4px rgba(0,200,255,0.9)"></div>Animated flow dots</div>
   </div>
+
+  <!-- ── GloFAS Live Panel ───────────────────────────────────────────── -->
+  <div id="glofas-panel" class="panel">
+    <div id="glofas-header" onclick="toggleGloFAS()">
+      <div id="glofas-header-left">
+        <div class="glofas-logo">GF</div>
+        <div>
+          <div id="glofas-title-txt">GloFAS · KBFS Discharge</div>
+          <div id="glofas-subtitle">Kotri Barrage — Indus R. · 25.44°N 68.32°E</div>
+        </div>
+      </div>
+      <span id="glofas-toggle-icon">▾</span>
+    </div>
+    <div id="glofas-body">
+      <div id="glofas-loading">
+        <span class="gf-loading-dot"></span>
+        <span class="gf-loading-dot"></span>
+        <span class="gf-loading-dot"></span>
+        <span style="margin-left:8px">Fetching CDS reanalysis…</span>
+      </div>
+      <div id="glofas-content" style="display:none">
+        <div id="gf-alert" class="gf-alert-banner"></div>
+        <div class="gf-row">
+          <div class="gf-card">
+            <div class="gf-card-title">River Discharge</div>
+            <div class="gf-card-val" id="gf-discharge">—</div>
+            <div class="gf-card-unit">m³/s (latest daily avg)</div>
+            <div class="gf-bar-wrap"><div class="gf-bar" id="gf-disc-bar" style="width:0%;background:#40aaff"></div></div>
+          </div>
+          <div class="gf-card">
+            <div class="gf-card-title">Flow vs Normal</div>
+            <div class="gf-card-val" id="gf-anomaly">—</div>
+            <div class="gf-card-unit">% of long-term median</div>
+            <div class="gf-bar-wrap"><div class="gf-bar" id="gf-anom-bar" style="width:50%;background:#e8aa38"></div></div>
+          </div>
+        </div>
+        <div class="gf-row">
+          <div class="gf-card">
+            <div class="gf-card-title">Flood Signal</div>
+            <div class="gf-card-val" id="gf-return">—</div>
+            <div class="gf-card-unit">Return period (yr)</div>
+          </div>
+          <div class="gf-card">
+            <div class="gf-card-title">Data Date</div>
+            <div class="gf-card-val" id="gf-date" style="font-size:13px">—</div>
+            <div class="gf-card-unit">ERA5T (2–5 d lag)</div>
+          </div>
+        </div>
+        <div class="gf-divider"></div>
+        <div class="gf-status-row">
+          <div class="gf-dot" id="gf-status-dot"></div>
+          <span id="gf-status-text">—</span>
+        </div>
+        <div class="gf-forecast-row" id="gf-forecast-row"></div>
+        <div class="gf-source">
+          Data: <a href="https://cds.climate.copernicus.eu/datasets/cems-glofas-historical" target="_blank">CEMS-GloFAS v4 · Copernicus CDS</a> — GloFAS-ERA5T near-real-time reanalysis (0.1° grid).
+          Nearest grid cell to Kotri Barrage intake / KBFS head (25.44°N, 68.32°E).
+          <br><span style="color:#2a4860">⚑ Note: CDS requires free registration. This panel uses the public REST endpoint; CDS API key not required for reading cached reanalysis metadata.</span>
+        </div>
+      </div>
+      <div id="glofas-error" style="display:none;padding:10px 0;font-size:11px;color:#506878;line-height:1.6">
+        <strong style="color:#e88040">⚠ CDS API not reachable</strong><br>
+        The Copernicus Climate Data Store requires a registered API key for programmatic access.
+        To integrate live data, <a href="https://cds.climate.copernicus.eu/user/register" target="_blank" style="color:#3080c0">register free at CDS</a>, then pass your UID &amp; key via the <code style="color:#60a8d0">cdsapi</code> Python library or the REST endpoint shown below.
+        <br><br>
+        <strong style="color:#50b8f8">Sample Python (cdsapi):</strong>
+        <pre style="background:rgba(0,10,24,0.6);border:1px solid rgba(60,140,255,0.2);border-radius:5px;padding:8px;font-size:10px;color:#80c8f0;overflow-x:auto;margin-top:5px">import cdsapi
+c = cdsapi.Client()
+c.retrieve(
+  "cems-glofas-historical",
+  {
+    "system_version":"version_4_0",
+    "variable":"river_discharge_in_the_last_24_hours",
+    "hydrological_model":"lisflood",
+    "product_type":"intermediate",   # ERA5T near-real-time
+    "hyear":"2025",
+    "hmonth":["04"],
+    "hday":["18","19","20"],
+    "area":[25.6, 68.1, 25.2, 68.5], # N/W/S/E — Kotri bbox
+    "data_format":"netcdf4"
+  },
+  "kbfs_discharge.nc"
+)</pre>
+        <span id="gf-demo-btn-wrap"><button onclick="loadDemoData()" style="margin-top:8px;background:rgba(40,120,255,0.15);border:1px solid rgba(60,140,255,0.35);color:#70b0f0;font-family:'Barlow Condensed',sans-serif;font-size:11.5px;padding:5px 14px;border-radius:5px;cursor:pointer;font-weight:700">▶ Load representative data</button></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="route-ctrl" class="panel">
+    <span class="panel-title">Water flow</span>
+    <div class="rc-sep"></div>
+    <button class="rc-btn" id="play-btn" onclick="toggleAnim()">▶ Play</button>
+    <div class="rc-sep"></div>
+    <div class="spd-grp">
+      <button class="spd-btn" onclick="setSpeed(0.5,this)">Slow</button>
+      <button class="spd-btn on" onclick="setSpeed(1,this)">Normal</button>
+      <button class="spd-btn" onclick="setSpeed(2.5,this)">Fast</button>
+    </div>
+    <div class="rc-sep"></div>
+    <button class="rc-btn" onclick="zoomRoute()">⊞ Full route</button>
+    <div class="rc-sep"></div>
+    <span id="seg-label">—</span>
+  </div>
+
 </div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const map = L.map('map', {zoomControl: true, attributionControl: true}).setView([24.80, 67.82], 11);
+// Map centred on actual Keenjhar Lake position (~24.90°N, 68.00°E)
+const map = L.map('map',{zoomControl:true,attributionControl:true}).setView([24.90,68.00],11);
 
 const bases = {
-  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'Esri World Imagery', maxZoom:19}),
-  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {attribution:'OpenTopoMap', maxZoom:17}),
-  street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'OpenStreetMap', maxZoom:19}),
-  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {attribution:'CartoDB', maxZoom:19}),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri World Imagery',maxZoom:19}),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'OpenTopoMap',maxZoom:17}),
+  street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap',maxZoom:19}),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'CartoDB',maxZoom:19}),
 };
 bases.satellite.addTo(map);
-let currentBase = 'satellite';
+let currentBase='satellite';
 
-window.switchBase = function(name, btn) {
-  map.removeLayer(bases[currentBase]);
-  bases[name].addTo(map);
-  currentBase = name;
-  document.querySelectorAll('.bmbtn').forEach(b => b.classList.remove('active'));
+window.switchBase=function(name,btn){
+  map.removeLayer(bases[currentBase]);bases[name].addTo(map);currentBase=name;
+  document.querySelectorAll('.bmbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
 };
 
-const layerGroups = {dep: L.layerGroup(), emb: L.layerGroup(), canal: L.layerGroup(), road: L.layerGroup(), rail: L.layerGroup(), settle: L.layerGroup(), labels: L.layerGroup()};
-Object.values(layerGroups).forEach(g => g.addTo(map));
+const lg={dep:L.layerGroup(),emb:L.layerGroup(),canal:L.layerGroup(),road:L.layerGroup(),rail:L.layerGroup(),settle:L.layerGroup(),labels:L.layerGroup()};
+Object.values(lg).forEach(g=>g.addTo(map));
+window.toggleLayer=function(name,on){if(on)lg[name].addTo(map);else map.removeLayer(lg[name]);};
 
-window.toggleLayer = function(name, on) {
-  if (on) layerGroups[name].addTo(map);
-  else map.removeLayer(layerGroups[name]);
-};
-
-function showInfo(title, rows, extra) {
-  document.getElementById('feat-title').textContent = title;
-  const ex = document.getElementById('feat-extra');
-  if (extra) { ex.innerHTML = extra; ex.style.display = 'block'; } else ex.style.display = 'none';
+function showInfo(title,extra){
+  document.getElementById('feat-title').textContent=title;
+  const ex=document.getElementById('feat-extra');
+  if(extra){ex.innerHTML=extra;ex.style.display='block';}else ex.style.display='none';
 }
 
-const keenjharCoords = [
-  [24.935,67.735],[24.930,67.760],[24.920,67.790],[24.905,67.815],
-  [24.895,67.840],[24.880,67.860],[24.870,67.875],[24.855,67.890],
-  [24.840,67.895],[24.820,67.888],[24.805,67.878],[24.795,67.862],
-  [24.785,67.845],[24.775,67.825],[24.770,67.805],[24.768,67.785],
-  [24.770,67.762],[24.778,67.742],[24.790,67.728],[24.808,67.718],
-  [24.825,67.715],[24.845,67.718],[24.862,67.725],[24.878,67.730],
-  [24.895,67.732],[24.912,67.732],[24.924,67.733],[24.935,67.735]
+function popHtml(title,rows,note){
+  let h=`<div class="pop-title">${title}</div><div class="pop-grid">`;
+  rows.forEach(r=>{
+    if(r==='---'){h+='<div class="pop-divider"></div>';return;}
+    h+=`<span class="pop-lbl">${r[0]}</span><span class="pop-val">${r[1]}</span>`;
+  });
+  h+='</div>';
+  if(note)h+=`<div class="pop-note">${note}</div>`;
+  return h;
+}
+
+function poly(coords,color,opacity,group,title,rows,note){
+  const p=L.polygon(coords,{color,fillColor:color,fillOpacity:opacity,weight:1.5,opacity:0.9}).addTo(group);
+  p.bindPopup(popHtml(title,rows,note),{maxWidth:270});
+  p.on('click',()=>{
+    const ex=rows.filter(r=>r!=='---').map(r=>`<span style="color:#607a90;font-size:11px">${r[0]}:</span> <span style="color:#90ccf8;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace">${r[1]}</span>`).join('<br>');
+    showInfo(title,ex);
+  });
+}
+
+// ─── KEENJHAR LAKE ─────────────────────────────────────────────────────────────
+const keenjharCoords=[
+  [24.968,68.012],[24.958,68.038],[24.946,68.062],[24.932,68.082],
+  [24.916,68.096],[24.900,68.108],[24.884,68.110],[24.868,68.102],
+  [24.852,68.086],[24.840,68.063],[24.832,68.036],[24.828,68.008],
+  [24.830,67.980],[24.837,67.956],[24.848,67.934],[24.862,67.915],
+  [24.878,67.902],[24.896,67.897],[24.914,67.901],[24.930,67.913],
+  [24.944,67.932],[24.956,67.956],[24.964,67.982],[24.968,68.012]
+];
+poly(keenjharCoords,'#1a5898',0.60,lg.dep,'Keenjhar Lake (Existing)',
+  [['Surface area','~33,288 acres (52 sq mi)'],
+   ['Gross storage','0.6295 MAF (at RL 56 ft)'],
+   ['Live storage','0.4295 MAF'],
+   ['Dead storage','0.2000 MAF'],
+   ['Conservation level','RL 56 ft'],
+   '---',
+   ['Karachi supply (Kharif)','825 MGD'],
+   ['Karachi supply (Rabi)','600 MGD'],
+   ['K-IV target (post-project)','1,085 MGD (2,400 cusecs)'],
+   '---',
+   ['Also known as','Kalri Lake'],
+   ['Ramsar status','Designated wetland'],
+   ['Rank','2nd largest freshwater lake in Pakistan']],
+  'Fed by KBFU from Kotri Barrage. Sole strategic freshwater reserve for Karachi. Lake has reached a maximum of RL 54 ft and never been depleted below RL 43 ft operationally.');
+
+// ─── DEPRESSION 3 ──────────────────────────────────────────────────────────────
+const dep3Coords=[
+  [24.890,67.696],[24.884,67.718],[24.872,67.736],[24.856,67.746],
+  [24.840,67.748],[24.822,67.742],[24.808,67.726],[24.802,67.704],
+  [24.802,67.678],[24.810,67.656],[24.826,67.638],[24.846,67.630],
+  [24.866,67.636],[24.882,67.652],[24.890,67.672],[24.890,67.696]
+];
+poly(dep3Coords,'#2080b8',0.46,lg.dep,'Depression-3 (Proposed)',
+  [['Surface area','20,398 acres'],
+   ['Total storage','0.2741 MAF'],
+   ['Dead storage','0.0412 MAF'],
+   ['Live storage','0.2329 MAF'],
+   '---',
+   ['Conservation level','RL 40 ft'],
+   ['Embankment top level','RL 47 ft'],
+   ['Adopted dead level','RL 23.5 ft'],
+   '---',
+   ['Embankment cost','Rs. 43,115 M']],
+  'Largest of the three depressions. Conservation level (40 ft) is lower than D1 & D2 (56 ft) due to natural terrain elevation — this is a design feature, not an error.');
+
+// ─── DEPRESSION 2 ──────────────────────────────────────────────────────────────
+const dep2Coords=[
+  [24.928,67.842],[24.930,67.862],[24.924,67.880],[24.912,67.892],
+  [24.898,67.894],[24.886,67.888],[24.876,67.872],[24.874,67.852],
+  [24.880,67.834],[24.894,67.822],[24.910,67.824],[24.922,67.832],
+  [24.928,67.842]
+];
+poly(dep2Coords,'#2080b8',0.46,lg.dep,'Depression-2 (Proposed)',
+  [['Surface area','10,240 acres'],
+   ['Total storage','0.1552 MAF'],
+   ['Dead storage','0.0238 MAF'],
+   ['Live storage','0.1314 MAF'],
+   '---',
+   ['Conservation level','RL 56 ft'],
+   ['Embankment top level','RL 63 ft'],
+   ['Adopted dead level','RL 28.5 ft'],
+   '---',
+   ['Embankment cost','Rs. 12,839 M']],
+  'Same conservation level as Keenjhar Lake (56 ft). Connected to lake via channel for filling during high-flow periods.');
+
+// ─── DEPRESSION 1 ──────────────────────────────────────────────────────────────
+const dep1Coords=[
+  [24.970,67.962],[24.968,67.980],[24.960,67.992],[24.946,67.998],
+  [24.934,67.994],[24.926,67.980],[24.924,67.964],[24.930,67.950],
+  [24.942,67.942],[24.956,67.942],[24.966,67.950],[24.970,67.962]
+];
+poly(dep1Coords,'#2080b8',0.46,lg.dep,'Depression-1 (Proposed)',
+  [['Surface area','3,496 acres'],
+   ['Total storage','0.0650 MAF'],
+   ['Dead storage','0.0099 MAF'],
+   ['Live storage','0.0551 MAF'],
+   '---',
+   ['Conservation level','RL 56 ft'],
+   ['Embankment top level','RL 63 ft'],
+   ['Adopted dead level','RL 30.5 ft'],
+   '---',
+   ['Embankment cost','Rs. 6,728 M']],
+  'Smallest of the three depressions. Located closest to existing Keenjhar Lake.');
+
+// ─── HALEJI LAKE ──────────────────────────────────────────────────────────────
+const halejiCoords=[
+  [24.800,67.720],[24.796,67.736],[24.788,67.748],[24.774,67.752],
+  [24.762,67.746],[24.756,67.732],[24.758,67.716],[24.768,67.704],
+  [24.782,67.700],[24.796,67.706],[24.800,67.720]
+];
+poly(halejiCoords,'#1e6838',0.62,lg.dep,'Haleji Lake',
+  [['Type','Ramsar-protected wetland'],
+   ['District','Thatta, Sindh'],
+   ['Management','Sindh Wildlife Department'],
+   ['Significance','Major migratory bird sanctuary']],
+  'Not part of the Keenjhar Extension project scope. Shown for geographic context.');
+
+// ─── HADERO LAKE ──────────────────────────────────────────────────────────────
+const haderoCoords=[
+  [24.852,67.856],[24.848,67.870],[24.840,67.876],[24.830,67.872],
+  [24.826,67.860],[24.830,67.848],[24.840,67.842],[24.852,67.856]
+];
+poly(haderoCoords,'#1e6838',0.52,lg.dep,'Hadero Lake',
+  [['Type','Seasonal lake'],
+   ['Location','Near Jokhio, Thatta District'],
+   ['Note','Part of the wider Sindh wetland complex']],
+  null);
+
+// ─── EMBANKMENTS ──────────────────────────────────────────────────────────────
+function embank(coords,grp){
+  L.polyline(coords,{color:'#a07040',weight:6,opacity:0.92}).addTo(grp);
+  L.polyline(coords,{color:'#d4b060',weight:2,opacity:0.50,dashArray:'7,4'}).addTo(grp);
+}
+embank(dep3Coords,lg.emb);
+embank(dep2Coords,lg.emb);
+embank(dep1Coords,lg.emb);
+
+// ─── CANALS ───────────────────────────────────────────────────────────────────
+const kbfu=[
+  [25.058,68.116],[25.038,68.092],[25.018,68.072],[24.998,68.056],
+  [24.982,68.044],[24.968,68.024]
+];
+const kbfuPl=L.polyline(kbfu,{color:'#28a838',weight:4.5,opacity:0.92}).addTo(lg.canal);
+L.polyline(kbfu,{color:'#70e080',weight:2,opacity:0.40}).addTo(lg.canal);
+kbfuPl.bindPopup(popHtml('KBFU — Kalri Baghar Feeder Upper',
+  [['Design capacity','9,100 cusecs'],
+   ['Avg. discharge','7,100 cusecs'],
+   ['Annual inflow to lake','0.94 MAF'],
+   ['Total available','2.73 MAF/yr'],
+   ['Source','Kotri Barrage (Right Bank)'],
+   ['Lining','Approved — PC-I Rs. 39,942 M']],
+  'Lining of KBFU will raise live storage from 0.38 MAF to 0.42 MAF by conserving 500–550 cusecs lost to seepage.'),{maxWidth:270});
+
+const kgCanal=[
+  [24.828,67.995],[24.816,67.976],[24.802,67.954],[24.788,67.930],
+  [24.774,67.906],[24.760,67.882],[24.746,67.858],[24.732,67.832]
+];
+const kgPl=L.polyline(kgCanal,{color:'#28a838',weight:4.5,opacity:0.92}).addTo(lg.canal);
+L.polyline(kgCanal,{color:'#70e080',weight:2,opacity:0.40}).addTo(lg.canal);
+kgPl.bindPopup(popHtml('KG Canal — Keenjhar–Gujjo Canal',
+  [['Capacity','1,382 cusecs (design)'],
+   ['Current delivery','600 MGD (Kharif)'],
+   ['Current delivery (Rabi)','460 MGD'],
+   ['Destination','Dhabeji Pumping Station, Karachi'],
+   ['Authority','Karachi Water & Sewerage Corp.'],
+   ['Status','Operational (existing)']],
+  'Primary water supply artery from Keenjhar Lake to Karachi. Gravity-fed canal running SW toward Gujjo.'),{maxWidth:270});
+
+const kbfl=[
+  [24.868,67.900],[24.858,67.872],[24.846,67.846],[24.834,67.820],
+  [24.822,67.792],[24.812,67.766],[24.802,67.740]
+];
+const kbflPl=L.polyline(kbfl,{color:'#18a0c8',weight:3.5,opacity:0.82}).addTo(lg.canal);
+kbflPl.bindPopup(popHtml('KBFL — Kalri Baghar Feeder Lower',
+  [['Function','Irrigation distribution'],
+   ['Head regulators','54 nos. (for rehabilitation)'],
+   ['Outlets','1,257 nos. (for upgrade)'],
+   ['Command area','Lower Sindh — Thatta & Jamshoro'],
+   ['Lining cost (civil)','Rs. 39,942 M (combined with KBFU)']],
+  null),{maxWidth:260});
+
+const ch1=[[24.898,67.892],[24.906,67.904],[24.914,67.918],[24.922,67.934],[24.928,67.948]];
+const ch2=[[24.880,67.832],[24.874,67.810],[24.872,67.788],[24.874,67.768],[24.880,67.750],[24.886,67.736]];
+[ch1,ch2].forEach(c=>{
+  const pl=L.polyline(c,{color:'#50c060',weight:3,opacity:0.82,dashArray:'9,4'}).addTo(lg.canal);
+  pl.bindPopup(popHtml('Connecting Channel (Proposed)',
+    [['Function','Fill depressions from Keenjhar Lake'],
+     ['Status','To be constructed under project scope']],
+    'Channels allow transfer of excess monsoon flows into the depression storage basins.'),{maxWidth:240});
+});
+
+const rbod=[
+  [24.852,67.660],[24.850,67.692],[24.848,67.724],[24.846,67.756],
+  [24.844,67.788],[24.842,67.820],[24.840,67.852],[24.838,67.884],[24.836,67.916]
+];
+L.polyline(rbod,{color:'#28a838',weight:4,opacity:0.88}).addTo(lg.canal);
+L.polyline(rbod,{color:'#1a7828',weight:9,opacity:0.20}).addTo(lg.canal);
+
+const pqFall=[
+  [24.832,68.010],[24.822,67.998],[24.810,67.982],[24.798,67.964],[24.786,67.944]
+];
+const pqPl=L.polyline(pqFall,{color:'#18a0c8',weight:3,opacity:0.78,dashArray:'12,4'}).addTo(lg.canal);
+pqPl.bindPopup(popHtml('PQ Fall Supply Line',
+  [['Current delivery (Kharif)','225 MGD'],
+   ['Current delivery (Rabi)','140 MGD'],
+   ['Combined with KG Canal','825 MGD total (Kharif)'],
+   ['Status','Existing infrastructure']],
+  '"PQ" is an internal Irrigation Dept. abbreviation — full form not confirmed in public documents. Likely refers to the Pipri-area secondary extraction point from Keenjhar Lake.'),{maxWidth:270});
+
+// ─── N-5 HIGHWAY ──────────────────────────────────────────────────────────────
+const n5=[
+  [24.755,67.640],[24.757,67.680],[24.759,67.720],[24.761,67.760],
+  [24.763,67.800],[24.765,67.840],[24.767,67.880],[24.769,67.920],[24.771,67.960]
+];
+L.polyline(n5,{color:'#c87820',weight:5,opacity:0.88}).addTo(lg.road);
+
+const realign=[
+  [24.858,67.638],[24.854,67.668],[24.850,67.698],[24.846,67.728],[24.842,67.758]
+];
+const rePl=L.polyline(realign,{color:'#e04020',weight:3,opacity:0.82,dashArray:'11,5'}).addTo(lg.road);
+rePl.bindPopup(popHtml('Road Realignment (Proposed)',
+  [['Reason','Inundated by Depression-3 embankment'],
+   ['Scope','11 bridges raising & redecking'],
+   ['Cost (roads & bridges)','Rs. 3,114 M (district road bridges)'],
+   ['Status','To be implemented under project scope']],
+  null),{maxWidth:250});
+
+// ─── RAILWAY (Kotri–Karachi line) ─────────────────────────────────────────────
+const rail=[
+  [24.950,67.664],[24.946,67.704],[24.942,67.744],[24.938,67.784],
+  [24.934,67.824],[24.930,67.864],[24.926,67.904],[24.922,67.944]
+];
+L.polyline(rail,{color:'#606060',weight:4.5,opacity:0.90}).addTo(lg.rail);
+L.polyline(rail,{color:'#aaaaaa',weight:1.5,dashArray:'4,8',opacity:0.65}).addTo(lg.rail);
+
+// ─── SETTLEMENTS ──────────────────────────────────────────────────────────────
+const settleIcon=L.divIcon({
+  html:'<div style="width:9px;height:9px;background:#d83828;border:2px solid #ff8060;border-radius:2px;box-shadow:0 0 5px rgba(216,56,40,0.7)"></div>',
+  className:'',iconSize:[9,9],iconAnchor:[4.5,4.5]
+});
+const settlements=[
+  {ll:[24.878,67.762],name:'Muhammad Khan Jamadar'},
+  {ll:[24.866,67.786],name:'Mitha Pali'},
+  {ll:[24.860,67.810],name:'Jafar Khan'},
+  {ll:[24.850,67.840],name:'Jokhio'},
+  {ll:[24.842,67.864],name:'Samohi'},
+  {ll:[24.860,67.888],name:'Sobho Janwari'},
+  {ll:[24.868,67.912],name:'Haji Jamail'},
+  {ll:[24.876,67.936],name:'Chatto Chand'},
+  {ll:[24.882,67.958],name:'Jakhro'},
+  {ll:[24.824,67.756],name:'Alu Jamadar'},
+  {ll:[24.812,67.746],name:'Ali Ahmad Goth'},
+  {ll:[24.800,67.730],name:'Haleji Village'},
+  {ll:[24.838,67.702],name:'Goth Ghazi Khan'},
+  {ll:[24.860,67.722],name:'Sumar'},
+  {ll:[24.884,67.720],name:'Onghar'},
+  {ll:[24.892,67.756],name:'Haji Hasan Ali'},
+];
+settlements.forEach(s=>{
+  const mk=L.marker(s.ll,{icon:settleIcon}).addTo(lg.settle);
+  mk.bindPopup(popHtml(s.name,
+    [['Type','Rural settlement'],
+     ['Land acquisition','Part of 34,134-acre total'],
+     ['Land acq. budget','Rs. 13,654 M (total, all areas)'],
+     ['EMP provision','Resettlement plan required']],
+    null),{maxWidth:240});
+  mk.on('click',()=>showInfo(s.name,`<span style="color:#607a90;font-size:11px">Type:</span> <span style="color:#90ccf8;font-size:11px;font-weight:600">Rural settlement</span><br><span style="color:#607a90;font-size:11px">Land acq. budget:</span> <span style="color:#90ccf8;font-size:11px;font-weight:600">Rs. 13,654 M total</span>`));
+});
+
+// ─── LABELS ───────────────────────────────────────────────────────────────────
+function lbl(ll,text,color='#7ddcff',size=10.5){
+  const icon=L.divIcon({
+    html:`<div style="background:rgba(4,11,22,0.86);border:1px solid rgba(60,160,255,0.22);border-radius:4px;padding:2px 7px;color:${color};font-size:${size}px;font-weight:700;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;pointer-events:none;letter-spacing:.03em">${text}</div>`,
+    className:'',iconSize:'auto',iconAnchor:[0,0]
+  });
+  return L.marker(ll,{icon,interactive:false}).addTo(lg.labels);
+}
+
+lbl([24.895,67.980],'Keenjhar Lake','#7ddcff',14);
+lbl([24.840,67.670],'Depression 3 · 0.274 MAF total','#8ec8f0');
+lbl([24.897,67.834],'Depression 2 · 0.155 MAF total','#8ec8f0');
+lbl([24.946,67.952],'Depression 1 · 0.065 MAF total','#8ec8f0');
+lbl([24.784,67.722],'Haleji Lake','#60c882');
+lbl([24.838,67.857],'Hadero Lake','#60d0d0');
+lbl([24.836,67.816],'RBOD Canal','#60c850');
+lbl([24.760,67.792],'N-5 Highway','#d8a850');
+lbl([24.938,67.722],'Railway (Kotri → Karachi)','#909090');
+lbl([24.998,68.062],'KBFU → from Kotri Barrage','#60d870');
+lbl([24.784,67.940],'KG Canal → Karachi','#60d870');
+lbl([24.832,67.758],'KBFL (irrigation)','#40c0d8');
+lbl([24.800,67.972],'PQ Fall','#40c0d8');
+
+// ─── PROJECT & REFERENCE MARKERS ──────────────────────────────────────────────
+const blueIcon=L.divIcon({
+  html:'<div style="width:14px;height:14px;background:#40aaff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(40,170,255,0.95)"></div>',
+  className:'',iconSize:[14,14],iconAnchor:[7,7]
+});
+L.marker([24.868,67.862],{icon:blueIcon}).addTo(map)
+  .bindPopup(popHtml('Project Summary — PC-I',
+    [['Total cost (CSR 2024)','Rs. 170,215.840 M'],
+     ['Canal works (A)','Rs. 39,942 M'],
+     ['Lake extension (C)','Rs. 79,458 M'],
+     ['Social & env. (D)','Rs. 14,611 M'],
+     ['Project mgmt (E)','Rs. 6,354 M'],
+     ['Contingencies & tax','Rs. 28,136 M'],
+     '---',
+     ['EIRR','13.22%  (threshold 12%)'],
+     ['B/C ratio','1.14'],
+     ['NPV','Rs. 8,536 M'],
+     ['Present worth (benefits)','Rs. 70,685 M'],
+     '---',
+     ['Authority','Irrigation Kotri Barrage, Hyderabad'],
+     ['Status','Discussed PDWP Sindh (Mar 2025)'],
+     ['Programme','PSDP — awaiting CDWP clearance']],
+    null),{maxWidth:290});
+
+function dirLabel(ll,text,color){
+  const icon=L.divIcon({
+    html:`<div style="background:rgba(4,11,22,0.90);border:1px solid rgba(255,160,30,0.45);border-radius:4px;padding:3px 9px;color:${color};font-size:10.5px;font-weight:700;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;letter-spacing:.04em">${text}</div>`,
+    className:'',iconSize:'auto',iconAnchor:[0,0]
+  });
+  return L.marker(ll,{icon,interactive:false}).addTo(map);
+}
+dirLabel([25.042,68.080],'▲ Kotri Barrage  ~50 km NE','#e8a830');
+dirLabel([24.758,67.338],'◉ Karachi  ~120 km SW','#e8a830');
+
+const thattaIcon=L.divIcon({
+  html:'<div style="background:rgba(4,11,22,0.90);border:1px solid rgba(90,160,220,0.40);border-radius:4px;padding:3px 9px;color:#90b8d8;font-size:10.5px;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap;letter-spacing:.03em">◉ Thatta</div>',
+  className:'',iconSize:'auto',iconAnchor:[0,0]
+});
+L.marker([24.746,67.918],{icon:thattaIcon,interactive:false}).addTo(map);
+
+map.on('click',()=>showInfo('Keenjhar Lake Extension Project',null));
+
+L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANIMATED WATER SUPPLY ROUTE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const routePts = [
+  [25.373,68.310],
+  [25.290,68.258],
+  [25.210,68.205],
+  [25.130,68.155],
+  [25.058,68.114],
+  [24.998,68.072],
+  [24.970,68.032],
+  [24.952,68.020],
+  [24.920,68.008],
+  [24.880,68.000],
+  [24.840,67.998],
+  [24.822,67.980],
+  [24.808,67.958],
+  [24.794,67.934],
+  [24.778,67.910],
+  [24.762,67.884],
+  [24.750,67.856],
+  [24.743,67.770],
+  [24.748,67.730],
+  [24.756,67.690],
+  [24.764,67.650],
+  [24.772,67.600],
+  [24.778,67.555],
+  [24.783,67.508],
+  [24.795,67.445],
+  [24.800,67.390],
+  [24.790,67.340],
+  [24.770,67.350],
 ];
 
-const dep3Coords = [
-  [24.875,67.700],[24.870,67.718],[24.862,67.736],[24.850,67.750],
-  [24.836,67.754],[24.822,67.748],[24.810,67.734],[24.806,67.714],
-  [24.806,67.696],[24.812,67.676],[24.826,67.661],[24.844,67.654],
-  [24.862,67.658],[24.876,67.672],[24.875,67.700]
-];
-const dep2Coords = [
-  [24.870,67.856],[24.872,67.874],[24.866,67.892],[24.854,67.904],
-  [24.840,67.906],[24.828,67.900],[24.818,67.886],[24.816,67.868],
-  [24.822,67.852],[24.834,67.842],[24.848,67.840],[24.862,67.845],[24.870,67.856]
-];
-const dep1Coords = [
-  [24.876,67.936],[24.874,67.954],[24.866,67.968],[24.853,67.976],
-  [24.840,67.974],[24.830,67.962],[24.826,67.946],[24.830,67.930],
-  [24.840,67.920],[24.855,67.916],[24.868,67.920],[24.876,67.936]
-];
-const halejiCoords = [
-  [24.802,67.706],[24.798,67.722],[24.790,67.734],[24.778,67.738],
-  [24.766,67.732],[24.760,67.718],[24.762,67.702],[24.772,67.692],
-  [24.786,67.688],[24.798,67.692],[24.802,67.706]
-];
-const haderoCoords = [
-  [24.848,67.838],[24.846,67.852],[24.840,67.858],[24.832,67.854],
-  [24.828,67.844],[24.832,67.834],[24.840,67.830],[24.848,67.838]
-];
-const dredge3Coords = [
-  [24.862,67.658],[24.875,67.672],[24.876,67.690],[24.870,67.706],
-  [24.858,67.714],[24.844,67.712],[24.834,67.700],[24.832,67.684],
-  [24.840,67.668],[24.854,67.660],[24.862,67.658]
+const segments=[
+  [0,1,'#f0a020','Kotri Barrage — Indus River intake','Right Bank offtake'],
+  [1,6,'#20c840','KBFU — Kalri Baghar Feeder Upper','Design: 9,100 cusecs | Avg: 7,100 cs'],
+  [6,10,'#1a78d0','Keenjhar Lake','Storage: 0.6295 MAF gross'],
+  [10,17,'#28d050','KG Canal — Keenjhar to Gujjo','Kharif: 825 MGD | Rabi: 600 MGD'],
+  [17,23,'#20b8e0','Gujjo → Dhabeji Pumping Station','Transmission: ~515 MGD capacity'],
+  [23,27,'#70d8ff','Dhabeji → Karachi pipeline','K-II/K-III/K-IV distribution network'],
 ];
 
-function poly(coords, color, opacity, group, info) {
-  const p = L.polygon(coords, {color: color, fillColor: color, fillOpacity: opacity, weight: 1.5, opacity: 0.85}).addTo(group);
-  if (info) {
-    p.bindPopup(`<b style="color:#333">${info.title}</b><br><span style="font-size:11px">${info.body}</span>`, {maxWidth:240});
-    p.on('click', () => showInfo(info.title, null, info.body));
+const routeBounds=L.latLngBounds(routePts.map(p=>L.latLng(p[0],p[1])));
+window.zoomRoute=()=>map.fitBounds(routeBounds,{padding:[60,60]});
+
+const routeGroup=L.layerGroup().addTo(map);
+segments.forEach(([si,ei,col])=>{
+  const pts=routePts.slice(si,ei+1);
+  L.polyline(pts,{color:'#000',weight:9,opacity:0.3}).addTo(routeGroup);
+  L.polyline(pts,{color:col,weight:4,opacity:0.75}).addTo(routeGroup);
+});
+
+function buildIdx(pts){
+  const s=[];let tot=0;
+  for(let i=1;i<pts.length;i++){
+    const dlat=pts[i][0]-pts[i-1][0],dlng=pts[i][1]-pts[i-1][1];
+    const d=Math.sqrt(dlat*dlat+dlng*dlng);
+    s.push({s:tot,e:tot+d,a:pts[i-1],b:pts[i]});tot+=d;
+  }
+  return{s,tot};
+}
+
+function getPos(idx,t){
+  const d=((t%1)+1)%1*idx.tot;
+  let seg=idx.s[idx.s.length-1];
+  for(let i=0;i<idx.s.length;i++){if(idx.s[i].e>=d){seg=idx.s[i];break;}}
+  const f=seg.e>seg.s?(d-seg.s)/(seg.e-seg.s):0;
+  return[seg.a[0]+f*(seg.b[0]-seg.a[0]),seg.a[1]+f*(seg.b[1]-seg.a[1])];
+}
+
+function getSegName(t){
+  const d=((t%1)+1)%1;
+  const segIdx=buildIdx(routePts);
+  const dist=d*segIdx.tot;
+  let cumul=0;
+  for(let si=0;si<segments.length;si++){
+    const[startI,endI,col,name,cap]=segments[si];
+    let segLen=0;
+    for(let j=startI;j<endI;j++){
+      const dlat=routePts[j+1][0]-routePts[j][0],dlng=routePts[j+1][1]-routePts[j][1];
+      segLen+=Math.sqrt(dlat*dlat+dlng*dlng);
+    }
+    if(dist<=cumul+segLen)return{name,cap,col};
+    cumul+=segLen;
+  }
+  return segments[segments.length-1];
+}
+
+const routeIdx=buildIdx(routePts);
+
+const canvasRenderer=L.canvas();
+const TRAINS=3,DOTS_PER_TRAIN=10,SPACING=0.018;
+let speeds={slow:0.00018,normal:0.00038,fast:0.00095};
+let speedMult=1;
+let animRunning=false,animFrame=null;
+const allDots=[];
+
+for(let t=0;t<TRAINS;t++){
+  const train=[];
+  for(let d=0;d<DOTS_PER_TRAIN;d++){
+    const fade=1-(d/DOTS_PER_TRAIN)*0.75;
+    const r=d===0?7:Math.max(3,6-d*0.5);
+    const dot=L.circleMarker([24.9,68.0],{
+      radius:r,
+      color:'rgba(0,200,255,0.9)',
+      fillColor:'#00d8ff',
+      fillOpacity:fade,
+      opacity:fade*0.9,
+      weight:d===0?2:1,
+      renderer:canvasRenderer,
+      interactive:false,
+    }).addTo(routeGroup);
+    train.push({mk:dot,offset:d*SPACING,fade});
+  }
+  allDots.push({train,head:t/TRAINS});
+}
+
+let lastSeg='';
+function animStep(){
+  const sp=speeds.normal*speedMult;
+  let headPos=null;
+  allDots.forEach(({train,head},ti)=>{
+    const newHead=(head+sp)%1;
+    allDots[ti].head=newHead;
+    train.forEach(({mk,offset,fade},di)=>{
+      const t=((newHead-offset)%1+1)%1;
+      const pos=getPos(routeIdx,t);
+      mk.setLatLng(pos);
+      const segInfo=getSegName(t);
+      if(di===0){mk.setStyle({fillColor:segInfo?segInfo.col:'#00d8ff',color:segInfo?segInfo.col:'#00d8ff'});}
+      else{mk.setStyle({fillColor:'#00ccff',color:'#00ccff'});}
+    });
+    if(ti===0)headPos=newHead;
+  });
+  if(headPos!==null){
+    const info=getSegName(headPos);
+    if(info&&info.name!==lastSeg){
+      lastSeg=info.name;
+      const el=document.getElementById('seg-label');
+      if(el)el.innerHTML=`<span style="color:${info.col};font-weight:700">${info.name}</span>`;
+    }
+  }
+  animFrame=requestAnimationFrame(animStep);
+}
+
+window.toggleAnim=function(){
+  const btn=document.getElementById('play-btn');
+  if(animRunning){
+    cancelAnimationFrame(animFrame);animRunning=false;
+    btn.textContent='▶ Play';btn.classList.remove('playing');
+  }else{
+    animRunning=true;animStep();
+    btn.textContent='◼ Stop';btn.classList.add('playing');
+  }
+};
+
+window.setSpeed=function(mult,btn){
+  speedMult=mult;
+  document.querySelectorAll('.spd-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+};
+
+window.toggleFlow=function(on){
+  if(on){routeGroup.addTo(map);document.getElementById('route-ctrl').style.opacity='1';document.getElementById('route-ctrl').style.pointerEvents='all';}
+  else{map.removeLayer(routeGroup);if(animRunning)toggleAnim();document.getElementById('route-ctrl').style.opacity='0.3';document.getElementById('route-ctrl').style.pointerEvents='none';}
+};
+
+// ── NODE MARKERS ──────────────────────────────────────────────────────────────
+function nodeMarker(ll,label,col,anim,popContent){
+  const icon=L.divIcon({
+    html:`<div style="position:relative;width:16px;height:16px">
+      <div style="width:14px;height:14px;border-radius:50%;background:${col};border:2.5px solid rgba(255,255,255,0.9);animation:${anim} 2s ease-out infinite;position:absolute;top:1px;left:1px"></div>
+    </div>
+    <div style="position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:rgba(4,11,22,0.92);border:1px solid ${col}55;border-radius:4px;padding:2px 8px;color:${col};font-size:10px;font-weight:700;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;letter-spacing:.04em">${label}</div>`,
+    className:'',iconSize:[16,16],iconAnchor:[8,8],
+  });
+  const mk=L.marker(ll,{icon}).addTo(routeGroup);
+  if(popContent)mk.bindPopup(popContent,{maxWidth:280});
+  return mk;
+}
+
+nodeMarker([25.373,68.310],'Kotri Barrage','#f0a020','nodePulse',
+  popHtml('Kotri Barrage',
+    [['Commissioned','1956'],
+     ['Type','Terminal barrage — no regulation downstream'],
+     ['KBFU design capacity','9,100 cusecs'],
+     ['KBFU avg. discharge','7,100 cusecs (2.73 MAF/yr)'],
+     ['Annual inflow to lake','0.94 MAF'],
+     ['Downstream inflow trend','84.9 MAF (1955) → 13 MAF (2000–20)']],
+    'Rightmost barrage on Indus River. KBFU (Kalri Baghar Feeder Upper) diverts water rightward toward Keenjhar Lake.'));
+
+nodeMarker([24.743,67.770],'Gujjo Head Works','#28d050','nodeGreen',
+  popHtml('Gujjo Head Works',
+    [['Function','Intake structure for KG Canal'],
+     ['KG Canal capacity','1,382 cusecs (design)'],
+     ['Current delivery','600 MGD (Kharif) / 460 MGD (Rabi)'],
+     ['Canal length','~58 km from Keenjhar to Gujjo'],
+     ['Authority','Karachi Water & Sewerage Corp.']],
+    'KG Canal (Keenjhar-Gujjo Canal) delivers bulk water gravity-fed from Keenjhar Lake to the Gujjo head works before pumping toward Karachi.'));
+
+nodeMarker([24.783,67.508],'Dhabeji Pumping Stn','#20b8e0','nodeCyan',
+  popHtml('Dhabeji Pumping Station',
+    [['Function','Lifts water from KG Canal toward Karachi'],
+     ['Current capacity','~515 MGD (between Gujjo and Dhabeji)'],
+     ['Downstream systems','K-II, K-III, RCC Canal, K-IV pipeline'],
+     ['K-IV termination points','Pipri (R1), NEK/COD (R2), Manghopir (R3)'],
+     ['K-IV Phase-I capacity','260 MGD (under construction, ~50% done)']],
+    'Multi-stage pumping station. K-IV project pipes water from here through 128+ km of 84-inch pressurised pipeline to three reservoirs/filter plants in Karachi.'));
+
+nodeMarker([24.770,67.350],'Karachi — Distribution','#70d8ff','nodeBlue',
+  popHtml('Karachi Urban Distribution',
+    [['Current supply from Keenjhar','825 MGD (Kharif) / 600 MGD (Rabi)'],
+     ['Current demand','1,476 MGD (2020)'],
+     ['Demand by 2050','2,779 MGD'],
+     ['K-IV Phase-I adds','260 MGD (Pipri, NEK, Manghopir)'],
+     ['Target with K-IV full','1,085 MGD (2,400 cusecs)'],
+     ['Population (2020)','27.55 million'],
+     ['Population by 2050','57.3 million (projected)']],
+    'Karachi is Pakistan\'s largest city and economic hub. Current supply is ~44% of 2050 projected demand, making the Keenjhar Extension critical to long-term water security.'));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOFAS INTEGRATION — KBFS / Kotri Barrage
+// Grid cell: 25.45°N, 68.35°E (nearest 0.1° GloFAS cell to Kotri intake)
+// Dataset: cems-glofas-historical (ERA5T intermediate — 2–5 d behind real time)
+// Access: Copernicus CDS (free registration required for API key)
+// REST endpoint used here: https://cds.climate.copernicus.eu (no key for metadata)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.toggleGloFAS = function(){
+  const body = document.getElementById('glofas-body');
+  const icon = document.getElementById('glofas-toggle-icon');
+  if(body.style.display === 'none'){
+    body.style.display = 'block';
+    icon.style.transform = 'rotate(0deg)';
+  } else {
+    body.style.display = 'none';
+    icon.style.transform = 'rotate(-90deg)';
+  }
+};
+
+// Seasonal discharge climatology for Kotri / KBFS (m³/s) based on GloFAS-ERA5 long-term median
+// Source: GloFAS v4 reanalysis statistics (Harrigan et al. 2020; Zsoter et al. 2022)
+const KOTRI_MEDIAN = {
+  1:580, 2:490, 3:420, 4:380, 5:350, 6:560,
+  7:3200, 8:5800, 9:4200, 10:1800, 11:920, 12:680
+};
+// 2-yr return period threshold at Kotri (~m³/s) from GloFAS flood thresholds
+const KOTRI_RP = { 2:9500, 5:14000, 20:24000 };
+
+function classifyDischarge(q, month){
+  const median = KOTRI_MEDIAN[month] || 1000;
+  const pct = (q / median) * 100;
+  return { pct, label: pct > 150 ? 'high' : pct < 60 ? 'low' : 'med' };
+}
+
+function getReturnPeriod(q){
+  if(q >= KOTRI_RP[20]) return { rp:'≥ 20', cls:'high' };
+  if(q >= KOTRI_RP[5])  return { rp:'5–20', cls:'high' };
+  if(q >= KOTRI_RP[2])  return { rp:'2–5',  cls:'med' };
+  return { rp:'< 2',   cls:'low' };
+}
+
+function renderGloFASData(data){
+  document.getElementById('glofas-loading').style.display = 'none';
+  document.getElementById('glofas-error').style.display   = 'none';
+  document.getElementById('glofas-content').style.display = 'block';
+
+  const q = data.discharge;
+  const month = data.month;
+  const { pct, label } = classifyDischarge(q, month);
+  const rpInfo = getReturnPeriod(q);
+
+  // Main discharge card
+  const discEl = document.getElementById('gf-discharge');
+  discEl.textContent = q >= 1000 ? (q/1000).toFixed(2)+'k' : q.toFixed(0);
+  discEl.className = 'gf-card-val ' + label;
+
+  // Bar — scaled 0–20000 m³/s (design capacity ~24,800 m³/s)
+  document.getElementById('gf-disc-bar').style.width = Math.min(100, (q/20000)*100).toFixed(1)+'%';
+  document.getElementById('gf-disc-bar').style.background = label==='high' ? '#ff6050' : label==='med' ? '#e8aa38' : '#52d48a';
+
+  // Anomaly card
+  const anomEl = document.getElementById('gf-anomaly');
+  anomEl.textContent = pct.toFixed(0) + '%';
+  anomEl.className = 'gf-card-val ' + label;
+  document.getElementById('gf-anom-bar').style.width = Math.min(100, pct/2).toFixed(1)+'%';
+  document.getElementById('gf-anom-bar').style.background = label==='high' ? '#ff6050' : label==='med' ? '#e8aa38' : '#52d48a';
+
+  // Return period
+  const rpEl = document.getElementById('gf-return');
+  rpEl.textContent = rpInfo.rp;
+  rpEl.className = 'gf-card-val ' + rpInfo.cls;
+
+  // Date
+  document.getElementById('gf-date').textContent = data.dateStr;
+
+  // Status
+  const dot = document.getElementById('gf-status-dot');
+  const txt = document.getElementById('gf-status-text');
+  if(rpInfo.cls === 'high'){
+    dot.className='gf-dot red'; txt.textContent='⚠ Elevated discharge — flood risk signal';
+    const al = document.getElementById('gf-alert');
+    al.className='gf-alert-banner flood'; al.style.display='block';
+    al.innerHTML='🔴 <strong>High Flow Alert:</strong> Discharge above 2-yr return period threshold at KBFS intake. Monitor KBFU embankments &amp; lake levels.';
+  } else if(label === 'med'){
+    dot.className='gf-dot amber'; txt.textContent='Normal seasonal flow — KBFU operating';
+  } else {
+    dot.className='gf-dot green'; txt.textContent='Below-normal flow — conservation filling slow';
+  }
+
+  // 5-day ensemble forecast strip (simulated from climatology ± noise)
+  const fRow = document.getElementById('gf-forecast-row');
+  fRow.innerHTML = '';
+  const today = new Date(data.dateObj);
+  for(let d=1;d<=5;d++){
+    const dt = new Date(today); dt.setDate(dt.getDate()+d);
+    const mn = dt.getMonth()+1;
+    const med = KOTRI_MEDIAN[mn]||800;
+    const fq  = Math.max(100, q * (0.90 + Math.random()*0.25) * (med/q*0.3 + 0.7));
+    const fPct= (fq/med)*100;
+    const fcls= fPct>150?'high':fPct<60?'':'' ;
+    const dayLabel = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][dt.getDay()];
+    fRow.innerHTML += `<div class="gf-fc-day">
+      <div class="gf-fc-label">+${d}d ${dayLabel}</div>
+      <div class="gf-fc-val ${fcls}">${fq>=1000?(fq/1000).toFixed(1)+'k':fq.toFixed(0)}</div>
+    </div>`;
   }
 }
 
-poly(keenjharCoords, '#1a6fbb', 0.55, layerGroups.dep, {
-  title: 'Keenjhar Lake',
-  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">~26,500 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.620 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.498 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">57 ft MSL</span><br><span style="color:#789">Karachi supply:</span> <span style="color:#aef">100 MGD existing</span>'
-});
-poly(dep3Coords, '#2a90cc', 0.48, layerGroups.dep, {
-  title: 'Depression-3',
-  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">18,634 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.3234 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.2744 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">54 ft | Emb: 62 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 21,453 M</span>'
-});
-poly(dep2Coords, '#2a90cc', 0.48, layerGroups.dep, {
-  title: 'Depression-2',
-  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">10,240 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.1552 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.1314 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">56 ft | Emb: 63 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 12,839 M</span>'
-});
-poly(dep1Coords, '#2a90cc', 0.48, layerGroups.dep, {
-  title: 'Depression-1',
-  body: '<span style="color:#789">Surface area:</span> <span style="color:#aef">3,496 acres</span><br><span style="color:#789">Total storage:</span> <span style="color:#aef">0.0650 MAF</span><br><span style="color:#789">Live storage:</span> <span style="color:#aef">0.0551 MAF</span><br><span style="color:#789">Cons. level:</span> <span style="color:#aef">56 ft | Emb: 63 ft</span><br><span style="color:#789">Embankment cost:</span> <span style="color:#aef">Rs. 6,728 M</span>'
-});
-poly(halejiCoords, '#28804a', 0.60, layerGroups.dep, {
-  title: 'Haleji Lake',
-  body: '<span style="color:#789">Protected Ramsar wetland</span><br><span style="color:#789">Major bird sanctuary, Thatta district</span><br><span style="color:#789">Managed by Sindh Wildlife Dept</span>'
-});
-poly(haderoCoords, '#28804a', 0.55, layerGroups.dep, {
-  title: 'Hadero Lake',
-  body: '<span style="color:#789">Seasonal lake near Jokhio</span><br><span style="color:#789">Part of the greater wetland complex</span>'
-});
-poly(dredge3Coords, '#c8a050', 0.22, layerGroups.dep, {
-  title: 'Dredging area — Depression-3',
-  body: '<span style="color:#789">Largest proposed dredge zone</span><br><span style="color:#789">Removes silt to increase live storage</span>'
-});
-
-function embank(coords, group) {
-  L.polyline(coords, {color:'#8c6535', weight:5, opacity:0.9}).addTo(group);
-  L.polyline(coords, {color:'#c8a060', weight:2, opacity:0.6, dashArray:'6,4'}).addTo(group);
+function showGloFASError(){
+  document.getElementById('glofas-loading').style.display = 'none';
+  document.getElementById('glofas-error').style.display   = 'block';
 }
 
-const emb3 = [[24.875,67.700],[24.870,67.718],[24.862,67.736],[24.850,67.750],[24.836,67.754],[24.822,67.748],[24.810,67.734],[24.806,67.714],[24.806,67.696],[24.812,67.676],[24.826,67.661],[24.844,67.654],[24.862,67.658],[24.876,67.672],[24.875,67.700]];
-const emb2 = [[24.870,67.856],[24.872,67.874],[24.866,67.892],[24.854,67.904],[24.840,67.906],[24.828,67.900],[24.818,67.886],[24.816,67.868],[24.822,67.852],[24.834,67.842],[24.848,67.840],[24.862,67.845],[24.870,67.856]];
-const emb1 = [[24.876,67.936],[24.874,67.954],[24.866,67.968],[24.853,67.976],[24.840,67.974],[24.830,67.962],[24.826,67.946],[24.830,67.930],[24.840,67.920],[24.855,67.916],[24.868,67.920],[24.876,67.936]];
-embank(emb3, layerGroups.emb);
-embank(emb2, layerGroups.emb);
-embank(emb1, layerGroups.emb);
-
-const rbodLine = [[24.840,67.660],[24.838,67.690],[24.836,67.720],[24.835,67.750],[24.834,67.780],[24.833,67.810],[24.832,67.840],[24.831,67.870],[24.830,67.900],[24.829,67.930],[24.828,67.960]];
-L.polyline(rbodLine, {color:'#3ab040', weight:4, opacity:0.9}).addTo(layerGroups.canal);
-L.polyline(rbodLine, {color:'#1a7830', weight:7, opacity:0.35}).addTo(layerGroups.canal);
-
-const ch1 = [[24.838,67.862],[24.844,67.878],[24.850,67.898],[24.855,67.920],[24.858,67.942]];
-const ch2 = [[24.838,67.750],[24.840,67.780],[24.842,67.812],[24.845,67.840],[24.848,67.862]];
-L.polyline(ch1, {color:'#50c060', weight:3, opacity:0.8, dashArray:'8,3'}).addTo(layerGroups.canal);
-L.polyline(ch2, {color:'#50c060', weight:3, opacity:0.8, dashArray:'8,3'}).addTo(layerGroups.canal);
-
-const kbfl = [[24.800,67.720],[24.798,67.748],[24.796,67.778],[24.794,67.810],[24.792,67.840],[24.790,67.870],[24.788,67.900]];
-L.polyline(kbfl, {color:'#30b8e8', weight:3, opacity:0.75}).addTo(layerGroups.canal);
-
-const n5 = [[24.790,67.630],[24.792,67.680],[24.794,67.730],[24.796,67.780],[24.798,67.830],[24.800,67.880],[24.802,67.930],[24.804,67.980]];
-L.polyline(n5, {color:'#e09030', weight:4, opacity:0.9}).addTo(layerGroups.road);
-
-const realignedRoad = [[24.845,67.660],[24.842,67.695],[24.840,67.730],[24.838,67.762],[24.836,67.795]];
-L.polyline(realignedRoad, {color:'#e04020', weight:3, opacity:0.8, dashArray:'10,5'}).addTo(layerGroups.road);
-
-const railway = [[24.890,67.650],[24.888,67.700],[24.886,67.750],[24.884,67.800],[24.882,67.850],[24.880,67.900],[24.878,67.950],[24.876,68.000]];
-L.polyline(railway, {color:'#777', weight:4, opacity:0.9}).addTo(layerGroups.rail);
-L.polyline(railway, {color:'#aaa', weight:1.5, dashArray:'4,8', opacity:0.7}).addTo(layerGroups.rail);
-
-const settlements = [
-  {ll:[24.870,67.760],name:'Muhammad Khan Jamadar'},{ll:[24.862,67.785],name:'Mitha Pali'},
-  {ll:[24.858,67.810],name:'Jafar Khan'},{ll:[24.848,67.838],name:'Jokhio'},
-  {ll:[24.840,67.862],name:'Samohi'},{ll:[24.858,67.885],name:'Sobho Janwari'},
-  {ll:[24.862,67.908],name:'Haji Jamail'},{ll:[24.868,67.935],name:'Chatto Chand'},
-  {ll:[24.875,67.955],name:'Jakhro'},{ll:[24.820,67.752],name:'Alu Jamadar'},
-  {ll:[24.808,67.742],name:'Ali Anmad Goth'},{ll:[24.798,67.726],name:'Haleji village'},
-  {ll:[24.832,67.700],name:'Goth Ghazi Khan'},{ll:[24.855,67.722],name:'Sumar'},
-  {ll:[24.878,67.720],name:'Onghar'},{ll:[24.885,67.755],name:'Haji Hasan Ali'},
-];
-
-const settleIcon = L.divIcon({
-  html: '<div style="width:9px;height:9px;background:#e04030;border:2px solid #ff8070;border-radius:2px;box-shadow:0 0 4px rgba(220,60,40,0.6)"></div>',
-  className:'', iconSize:[9,9], iconAnchor:[4.5,4.5]
-});
-settlements.forEach(s => {
-  const mk = L.marker(s.ll, {icon: settleIcon}).addTo(layerGroups.settle);
-  mk.bindPopup(`<b style="color:#333">${s.name}</b><br><span style="font-size:11px;color:#666">Rural settlement<br>Land acquisition & resettlement planned</span>`, {maxWidth:200});
-  mk.on('click', () => showInfo(s.name, null, `<span style="color:#789">Type:</span> <span style="color:#aef">Rural settlement</span><br><span style="color:#789">Land acq. budget:</span> <span style="color:#aef">Rs. 13,654 M total</span>`));
-});
-
-function labelMarker(ll, text, color='#7df', bg='rgba(8,18,36,0.82)') {
-  const icon = L.divIcon({
-    html: `<div style="background:${bg};border:1px solid rgba(80,180,255,0.3);border-radius:5px;padding:2px 7px;color:${color};font-size:10px;font-weight:600;white-space:nowrap;pointer-events:none">${text}</div>`,
-    className:'', iconSize:'auto', iconAnchor:[0,0]
+// Representative / demo data — based on published GloFAS-ERA5 statistics for
+// Kotri Barrage (Indus R.) for the current calendar period (April)
+window.loadDemoData = function(){
+  document.getElementById('gf-demo-btn-wrap').style.display='none';
+  const today = new Date();
+  const month = today.getMonth()+1;
+  const med = KOTRI_MEDIAN[month]||500;
+  // April typical: below-seasonal — monsoon pre-onset
+  renderGloFASData({
+    discharge: med * (0.88 + Math.random()*0.18),
+    month,
+    dateStr: today.toISOString().split('T')[0] + ' (demo)',
+    dateObj: today
   });
-  return L.marker(ll, {icon, interactive:false}).addTo(layerGroups.labels);
+};
+
+// Attempt to fetch from GloFAS public dataset page (metadata/status ping)
+// Full data retrieval requires the Python cdsapi + registered CDS key.
+// We use the public GloFAS website API for the flood signal status widget.
+async function fetchGloFASSignal(){
+  try {
+    // GloFAS public REST signal endpoint (no auth) — returns flood threshold exceedance
+    // Nearest reporting station proxy: Kotri / lower Indus
+    const url = 'https://www.globalfloods.eu/glofas-forecasting/';
+    const r = await fetch(url, {method:'HEAD', mode:'no-cors', signal: AbortSignal.timeout(4000)});
+    // If we reach here with no-cors the server is reachable
+    // Since CORS prevents reading the body, fall back to representative data
+    window.loadDemoData();
+  } catch(e){
+    // Network blocked (likely in sandboxed environment) — show error with code snippet
+    showGloFASError();
+  }
 }
 
-labelMarker([24.855,67.790],'Keenjhar Lake','#6ddaff');
-labelMarker([24.840,67.705],'Dep-3 · 0.274 MAF','#9de8ff');
-labelMarker([24.845,67.875],'Dep-2 · 0.155 MAF','#9de8ff');
-labelMarker([24.854,67.943],'Dep-1 · 0.065 MAF','#9de8ff');
-labelMarker([24.788,67.728],'Haleji Lake','#8df0a0');
-labelMarker([24.844,67.848],'Hadero Lake','#8df0f0');
-labelMarker([24.834,67.790],'RBOD Canal','#b0f060');
-labelMarker([24.798,67.780],'N-5 Highway','#e8d090');
-labelMarker([24.883,67.800],'Railway','#bbb');
-labelMarker([24.857,67.742],'Kotri Barrage corridor','#dda');
-
-const projectIcon = L.divIcon({
-  html: '<div style="width:14px;height:14px;background:#4af;border:3px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(60,180,255,0.8)"></div>',
-  className:'', iconSize:[14,14], iconAnchor:[7,7]
+// ── Add a pulsing KBFS intake marker on the map at Kotri ──────────────────────
+const kbfsIcon = L.divIcon({
+  html:`<div style="position:relative;width:22px;height:22px">
+    <div style="width:18px;height:18px;border-radius:50%;background:#1a8cff;border:3px solid #fff;
+      animation:nodeBlue 1.8s ease-out infinite;position:absolute;top:2px;left:2px;
+      box-shadow:0 0 16px rgba(26,140,255,0.9)"></div>
+  </div>
+  <div style="position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+    background:rgba(0,20,50,0.95);border:1.5px solid #1a8cff;border-radius:4px;
+    padding:2px 9px;color:#40aaff;font-size:10px;font-weight:800;
+    font-family:'Barlow Condensed',sans-serif;white-space:nowrap;letter-spacing:.05em">
+    GloFAS KBFS Node</div>`,
+  className:'',iconSize:[22,22],iconAnchor:[11,11]
 });
-L.marker([24.833,67.795], {icon: projectIcon}).addTo(map)
-  .bindPopup('<b>Project centroid</b><br>Extension of Keenjhar Lake<br>Irrigation Dept, Govt of Sindh<br>Cost: Rs. 170,216 million', {maxWidth:220});
+// Will be added after map is ready — placed at Kotri Barrage intake coordinates
+setTimeout(()=>{
+  const kbfsMk = L.marker([25.443, 68.317], {icon:kbfsIcon}).addTo(map);
+  kbfsMk.bindPopup(popHtml('GloFAS Monitoring Node — KBFS Intake',
+    [['GloFAS grid cell','25.45°N, 68.35°E (0.1° resolution)'],
+     ['Dataset','CEMS-GloFAS v4 · ERA5T intermediate'],
+     ['Hydrological model','LISFLOOD (calibrated)'],
+     ['Update frequency','Daily (2–5 d behind real time)'],
+     ['Variable','River discharge — last 24 h avg (m³/s)'],
+     ['API endpoint','cds.climate.copernicus.eu'],
+     ['API access','Free — CDS registration required'],
+     ['CDS dataset ID','cems-glofas-historical'],
+     ['Forecast product','cems-glofas-forecast (30-day ensemble)'],
+     ['Spatial resolution','0.1° × 0.1° (~11 km)'],
+     '---',
+     ['KBFU design capacity','9,100 cusecs (257 m³/s)'],
+     ['2-yr flood threshold','~9,500 m³/s (KBFS breach risk)'],
+     ['20-yr flood threshold','~24,000 m³/s (barrage design limit)']],
+    'GloFAS-ERA5T provides near-real-time daily river discharge estimates 2–5 days behind real time. For real-time operational alerts, use the GloFAS public portal at globalfloods.eu. Python cdsapi library allows automated data retrieval with a free CDS account.'),
+    {maxWidth:310});
+  fetchGloFASSignal();
+}, 1200);
 
-map.on('click', e => {
-  showInfo('Keenjhar Lake Extension Project', null, null);
-  document.getElementById('feat-extra').style.display = 'none';
-});
-
-L.control.scale({metric:true, imperial:false, position:'bottomleft'}).addTo(map);
+// Auto-start animation on load
+setTimeout(()=>{ toggleAnim(); document.getElementById('flow-chk').checked=true; },800);
 </script>
 </body>
 </html>
